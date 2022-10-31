@@ -1,11 +1,12 @@
-from typing import List, Dict, Optional, Callable, Union
-
+from typing import List, Dict, Optional, Callable, Union, Tuple
+from time import perf_counter
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 from deduplipy.active_learning.active_learning import ActiveStringMatchLearner
 from deduplipy.blocking import Blocking, all_rules
-from deduplipy.clustering.clustering import hierarchical_clustering
+from deduplipy.clustering.clustering import hierarchical_clustering, markov_clustering
 from deduplipy.config import DEDUPLICATION_ID_NAME, ROW_ID
 from deduplipy.sampling.sampler import Sampler
 from deduplipy.sampling import MinHashSampler, NaiveSampler
@@ -106,7 +107,7 @@ class Deduplicator:
         # the number of minhash samples can be (much) smaller than n_samples//2, in such case take more random pairs:
         n_samples_naive = n_samples - len(minhash_pairs)
         naive_pairs = NaiveSampler(self.col_names).sample(X, n_samples_naive)
-        pairs = naive_pairs.append(minhash_pairs)
+        pairs = naive_pairs#.append(minhash_pairs)
         return pairs.drop_duplicates()
 
     def _calculate_string_similarities(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -165,7 +166,7 @@ class Deduplicator:
         return X
 
     def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, cluster_threshold: float = 0.5,
-                fill_missing=True) -> pd.DataFrame:
+                fill_missing=True) -> tuple[DataFrame, DataFrame]:
         """
         Predict on new data using the trained deduplicator.
 
@@ -180,15 +181,23 @@ class Deduplicator:
             deduplicated.
 
         """
-        df = X[self.col_names].drop_duplicates().copy()
+        lengte = len(X)
+        duplicates = X[X.duplicated(self.col_names)]
+        #df = X[self.col_names].drop_duplicates().copy()
+        df = X.copy()
         df[ROW_ID] = np.arange(len(df))
+        lengte2 = len(df)
         if self.verbose:
             print('blocking started')
+            b_start = perf_counter()
         pairs_table = self.myBlocker.transform(df)
         if self.verbose:
+            b_stop = perf_counter()
             print('blocking finished')
+            print(f'blocking took:{b_stop-b_start} seconds')
             print(f'Nr of pairs: {len(pairs_table)}')
             print('scoring started')
+            s_start = perf_counter()
         scored_pairs_table = self._calculate_string_similarities(pairs_table)
         scored_pairs_table['score'] = self.myActiveLearner.predict_proba(
             scored_pairs_table['similarities'].tolist())[:, 1]
@@ -196,18 +205,29 @@ class Deduplicator:
             (scored_pairs_table[[f'{x}_1' for x in self.col_names]].values == scored_pairs_table[
                 [f'{x}_2' for x in self.col_names]].values).all(axis=1), 'score'] = 1
         if self.verbose:
+            s_stop = perf_counter()
             print("scoring finished")
+            print(f'scoring took:{s_stop-s_start} seconds')
         scored_pairs_table = scored_pairs_table[scored_pairs_table['score'] >= score_threshold]
         if self.verbose:
             print(f'Nr of filtered pairs: {len(scored_pairs_table)}')
             print('Clustering started')
+            c_start = perf_counter()
         if self.save_intermediate_steps:
             scored_pairs_table.to_csv('scored_pairs_table.csv', index=None, sep="|")
-        df_clusters = hierarchical_clustering(scored_pairs_table, col_names=self.col_names,
+        df_clusters, mc_clusters = hierarchical_clustering(scored_pairs_table, col_names=self.col_names,
                                               cluster_threshold=cluster_threshold, fill_missing=fill_missing)
-        df = df.merge(df_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
+        self.clusters = df_clusters
+        self.mc_clusters = mc_clusters
+        df_end = df.merge(df_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
+        df2 = df.merge(mc_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
         if self.verbose:
+            c_stop = perf_counter()
             print('Clustering finished')
-        df = self._add_singletons(df)
+            print(f'clustering took:{c_stop-c_start} seconds')
+        df = self._add_singletons(df_end)
+        df2 = self._add_singletons(df2)
+
         df[DEDUPLICATION_ID_NAME] = df[DEDUPLICATION_ID_NAME].astype(int)
-        return df
+        df2[DEDUPLICATION_ID_NAME] = df2[DEDUPLICATION_ID_NAME].astype(int)
+        return df, df2
