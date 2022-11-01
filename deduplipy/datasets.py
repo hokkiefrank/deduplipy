@@ -22,9 +22,9 @@ def load_music_20k() -> pd.DataFrame:
     filepath = resource_filename('deduplipy', os.path.join('data', 'musicbrainz_20k.csv'))
     df = pd.read_csv(filepath)
     df = df[['CID', 'title', 'artist', 'album']]
-    lengte1 = len(df)
-    df.dropna(subset=['title', 'artist'], inplace=True)
-    lengte2 = len(df)
+    #lengte1 = len(df)
+    #df.dropna(subset=['title', 'artist'], inplace=True)
+    #lengte2 = len(df)
     df['title'] = df['title'].astype('U').values
     df['artist'] = df['artist'].astype('U').values
     df['album'] = df['album'].astype('U').values

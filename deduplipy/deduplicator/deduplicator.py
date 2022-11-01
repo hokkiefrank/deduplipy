@@ -6,7 +6,7 @@ from pandas import DataFrame
 
 from deduplipy.active_learning.active_learning import ActiveStringMatchLearner
 from deduplipy.blocking import Blocking, all_rules
-from deduplipy.clustering.clustering import hierarchical_clustering, markov_clustering
+from deduplipy.clustering.clustering import hierarchical_clustering, markov_clustering, basic_clustering_steps
 from deduplipy.config import DEDUPLICATION_ID_NAME, ROW_ID
 from deduplipy.sampling.sampler import Sampler
 from deduplipy.sampling import MinHashSampler, NaiveSampler
@@ -166,7 +166,7 @@ class Deduplicator:
         return X
 
     def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, cluster_threshold: float = 0.5,
-                fill_missing=True) -> tuple[DataFrame, DataFrame]:
+                fill_missing=True, clustering=hierarchical_clustering) -> pd.DataFrame:
         """
         Predict on new data using the trained deduplicator.
 
@@ -182,7 +182,7 @@ class Deduplicator:
 
         """
         lengte = len(X)
-        duplicates = X[X.duplicated(self.col_names)]
+        #duplicates = X[X.duplicated(self.col_names)]
         #df = X[self.col_names].drop_duplicates().copy()
         df = X.copy()
         df[ROW_ID] = np.arange(len(df))
@@ -194,7 +194,7 @@ class Deduplicator:
         if self.verbose:
             b_stop = perf_counter()
             print('blocking finished')
-            print(f'blocking took:{b_stop-b_start} seconds')
+            print(f'blocking took:{b_stop-b_start:.4f} seconds')
             print(f'Nr of pairs: {len(pairs_table)}')
             print('scoring started')
             s_start = perf_counter()
@@ -207,7 +207,7 @@ class Deduplicator:
         if self.verbose:
             s_stop = perf_counter()
             print("scoring finished")
-            print(f'scoring took:{s_stop-s_start} seconds')
+            print(f'scoring took:{s_stop-s_start:.4f} seconds')
         scored_pairs_table = scored_pairs_table[scored_pairs_table['score'] >= score_threshold]
         if self.verbose:
             print(f'Nr of filtered pairs: {len(scored_pairs_table)}')
@@ -215,19 +215,15 @@ class Deduplicator:
             c_start = perf_counter()
         if self.save_intermediate_steps:
             scored_pairs_table.to_csv('scored_pairs_table.csv', index=None, sep="|")
-        df_clusters, mc_clusters = hierarchical_clustering(scored_pairs_table, col_names=self.col_names,
-                                              cluster_threshold=cluster_threshold, fill_missing=fill_missing)
-        self.clusters = df_clusters
-        self.mc_clusters = mc_clusters
+        df_clusters = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
+                                             clustering_algorithm=clustering)
         df_end = df.merge(df_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
-        df2 = df.merge(mc_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
         if self.verbose:
             c_stop = perf_counter()
             print('Clustering finished')
-            print(f'clustering took:{c_stop-c_start} seconds')
+            print(f'clustering took:{c_stop-c_start:.4f} seconds')
+            print('Done! Returning clusters')
         df = self._add_singletons(df_end)
-        df2 = self._add_singletons(df2)
 
         df[DEDUPLICATION_ID_NAME] = df[DEDUPLICATION_ID_NAME].astype(int)
-        df2[DEDUPLICATION_ID_NAME] = df2[DEDUPLICATION_ID_NAME].astype(int)
-        return df, df2
+        return df
