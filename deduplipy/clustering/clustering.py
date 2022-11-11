@@ -42,12 +42,16 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
     cluster_counter = 0
     for component in components:
         subgraph = graph.subgraph(component)
-        clusters = clustering_algorithm(subgraph, **args)
+        if clustering_algorithm.__name__ in args['args']:
+            clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
+        else:
+            clusters = clustering_algorithm(subgraph)
         clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
         cluster_counter += len(component)
 
-    df_clusters = pd.DataFrame.from_dict(clustering, orient='index', columns=[DEDUPLICATION_ID_NAME])
-    df_clusters.sort_values(DEDUPLICATION_ID_NAME, inplace=True)
+    df_clusters = pd.DataFrame.from_dict(clustering, orient='index',
+                                         columns=[DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__])
+    df_clusters.sort_values(DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__, inplace=True)
     df_clusters[ROW_ID] = df_clusters.index
 
     return df_clusters
@@ -70,6 +74,8 @@ def hierarchical_clustering(subgraph, cluster_threshold: float = 0.5, fill_missi
     """
     if len(subgraph.nodes) > 1:
         adjacency = nx.to_numpy_array(subgraph, weight='score')
+        #if len(subgraph.nodes) > 8:
+        #    print("Interesting component here!")
         if fill_missing:
             adjacency = fill_missing_links(adjacency)
         distances = (np.ones_like(adjacency) - np.eye(len(adjacency))) - adjacency
@@ -95,6 +101,10 @@ def markov_clustering(subgraph, inflation: float = 2) -> np.ndarray:
         ndarray of clusters
 
     """
+    #if len(subgraph.nodes) < 2:
+    #    print("En nu?")
+    #if len(subgraph.nodes) > 8:
+    #    print("Interesting component here!")
     matrix = nx.to_scipy_sparse_matrix(subgraph, weight="score")
     result = mc.run_mcl(matrix, inflation=inflation)
     mc_clusters = mc.get_clusters(result)
@@ -106,4 +116,16 @@ def markov_clustering(subgraph, inflation: float = 2) -> np.ndarray:
         clust_ind += 1
     clusters = numpy.array(mc_clusters_formatted)
 
+    return clusters
+
+
+def connected_components(subgraph) -> np.ndarray:
+    """
+    As the connected components algorithm is already in the base step of clustering, all it has to do is return
+    an array of 1's, indicating that the entire component found is a cluster. Purely for baseline
+    Returns: a ndarray of 1's
+
+    """
+
+    clusters = np.ones((len(subgraph.nodes), ), dtype=int)
     return clusters

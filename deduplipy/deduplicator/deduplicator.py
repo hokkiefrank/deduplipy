@@ -148,7 +148,7 @@ class Deduplicator:
         return self
 
     @staticmethod
-    def _add_singletons(X: pd.DataFrame) -> pd.DataFrame:
+    def _add_singletons(X: pd.DataFrame, col_name) -> pd.DataFrame:
         """
         Adds `deduplication_id` to rows that are not deduplicated with other rows.
 
@@ -159,34 +159,32 @@ class Deduplicator:
             deduplication result where singletons have values for `deduplication_id`
 
         """
-        n_missing = len(X[X[DEDUPLICATION_ID_NAME].isnull()])
-        max_cluster_id = X[X[DEDUPLICATION_ID_NAME].notnull()][DEDUPLICATION_ID_NAME].max()
-        X.loc[X[DEDUPLICATION_ID_NAME].isnull(), DEDUPLICATION_ID_NAME] = np.arange(max_cluster_id + 1,
-                                                                                    max_cluster_id + 1 + n_missing)
+        n_missing = len(X[X[col_name].isnull()])
+        max_cluster_id = X[X[col_name].notnull()][col_name].max()
+        X.loc[X[col_name].isnull(), col_name] = np.arange(max_cluster_id + 1, max_cluster_id + 1 + n_missing)
         return X
 
-    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, cluster_threshold: float = 0.5,
-                fill_missing=True, clustering=hierarchical_clustering) -> pd.DataFrame:
+    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None, **args) -> pd.DataFrame:
         """
         Predict on new data using the trained deduplicator.
 
         Args:
+            clustering: A list of clustering algorithms that are used for the clustering step. Named args per algorithm
+            should be put in the **args dict of this function with firstly their name as key with value the dict
+            old_scored_pairs: If a dataframe is given of old scoring pairs, this one will be used to speed up the
+            process by removing the renewed calculation of the scored pairs
             X: Pandas dataframe with column as used when fitting deduplicator instance
             score_threshold: Classification threshold to use for filtering before starting hierarchical clustering
-            cluster_threshold: threshold to apply in hierarchical clustering
-            fill_missing: whether to apply missing value imputation on adjacency matrix
 
         Returns:
             Pandas dataframe with a new column `deduplication_id`. Rows with the same `deduplication_id` are
             deduplicated.
 
         """
-        lengte = len(X)
         #duplicates = X[X.duplicated(self.col_names)]
         #df = X[self.col_names].drop_duplicates().copy()
         df = X.copy()
         df[ROW_ID] = np.arange(len(df))
-        lengte2 = len(df)
         if self.verbose:
             print('blocking started')
             b_start = perf_counter()
@@ -198,12 +196,15 @@ class Deduplicator:
             print(f'Nr of pairs: {len(pairs_table)}')
             print('scoring started')
             s_start = perf_counter()
-        scored_pairs_table = self._calculate_string_similarities(pairs_table)
-        scored_pairs_table['score'] = self.myActiveLearner.predict_proba(
-            scored_pairs_table['similarities'].tolist())[:, 1]
-        scored_pairs_table.loc[
-            (scored_pairs_table[[f'{x}_1' for x in self.col_names]].values == scored_pairs_table[
-                [f'{x}_2' for x in self.col_names]].values).all(axis=1), 'score'] = 1
+        if old_scored_pairs is not None:
+            scored_pairs_table = old_scored_pairs
+        else:
+            scored_pairs_table = self._calculate_string_similarities(pairs_table)
+            scored_pairs_table['score'] = self.myActiveLearner.predict_proba(
+                scored_pairs_table['similarities'].tolist())[:, 1]
+            scored_pairs_table.loc[
+                (scored_pairs_table[[f'{x}_1' for x in self.col_names]].values == scored_pairs_table[
+                    [f'{x}_2' for x in self.col_names]].values).all(axis=1), 'score'] = 1
         if self.verbose:
             s_stop = perf_counter()
             print("scoring finished")
@@ -211,19 +212,21 @@ class Deduplicator:
         scored_pairs_table = scored_pairs_table[scored_pairs_table['score'] >= score_threshold]
         if self.verbose:
             print(f'Nr of filtered pairs: {len(scored_pairs_table)}')
-            print('Clustering started')
-            c_start = perf_counter()
         if self.save_intermediate_steps:
-            scored_pairs_table.to_csv('scored_pairs_table.csv', index=None, sep="|")
-        df_clusters = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
-                                             clustering_algorithm=clustering)
-        df_end = df.merge(df_clusters, on=ROW_ID, how='left').drop(columns=[ROW_ID])
-        if self.verbose:
-            c_stop = perf_counter()
-            print('Clustering finished')
-            print(f'clustering took:{c_stop-c_start:.4f} seconds')
-            print('Done! Returning clusters')
-        df = self._add_singletons(df_end)
+            scored_pairs_table.to_csv('scored_pairs_table_musicbrainz20k.csv', index=None, sep="|")
+        for methods in clustering:
+            if self.verbose:
+                print(f'Clustering started for cluster method:{methods.__name__}')
+                c_start = perf_counter()
+            df_clusters = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
+                                             clustering_algorithm=methods, args=args['args'])
+            df_end = df.merge(df_clusters, on=ROW_ID, how='left')
+            if self.verbose:
+                c_stop = perf_counter()
+                print(f'Clustering finished for cluster method:{methods.__name__}')
+                print(f'clustering took:{c_stop-c_start:.4f} seconds')
+            df = self._add_singletons(df_end, DEDUPLICATION_ID_NAME+"_"+methods.__name__)
 
-        df[DEDUPLICATION_ID_NAME] = df[DEDUPLICATION_ID_NAME].astype(int)
+            df[DEDUPLICATION_ID_NAME+"_"+methods.__name__] = df[DEDUPLICATION_ID_NAME+"_"+methods.__name__].astype(int)
+        df = df.drop(columns=[ROW_ID])
         return df

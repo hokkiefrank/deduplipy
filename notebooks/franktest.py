@@ -1,8 +1,11 @@
 import statistics
 from statistics import mode
 from time import perf_counter
+import os
+from pkg_resources import resource_filename
+import pandas as pd
 from entity_resolution_evaluation.evaluation import evaluate
-from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering
+from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering, connected_components
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
 import pickle
@@ -19,7 +22,7 @@ def intersection(lst1, lst2):
     return lst3
 
 
-def mapping(gtc, data, fc):
+def mapping(gtc, data, fc, cn):
     returner = {}  # dictionary where the key is the groundtruth clusternumber and the value the mapped found clusternumber
     for i, ground_cluster in gtc.items():
         # high = 0
@@ -28,11 +31,10 @@ def mapping(gtc, data, fc):
         found_in = []
         results = {}
         for val in ground_cluster:
-            clust_id = data.iloc[val]["deduplication_id"]
+            clust_id = data.iloc[val][cn]
             if clust_id not in found_in:
                 # clust_size = len(data[data["deduplication_id"] == clust_id])
-                result = intersection(ground_cluster, data.index[data[
-                                                                     "deduplication_id"] == clust_id].tolist())  # intersection between one of the foundclusters with the groundtruth cluster
+                result = intersection(ground_cluster, data.index[data[cn] == clust_id].tolist())  # intersection between one of the foundclusters with the groundtruth cluster
                 results[clust_id] = len(result)  # / clust_size
             found_in.append(clust_id)
         f = max(results, key=results.get)
@@ -66,8 +68,8 @@ def recall(mapp, gtc, fc):
     return pres
 
 
-def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10):
-    mapp = mapping(ground_truth_cluster, all_data, found_clusters)
+def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10, coll_name="deduplication_id"):
+    mapp = mapping(ground_truth_cluster, all_data, found_clusters, coll_name)
     precisions = precision(mapp, ground_truth_cluster, found_clusters)
     total_precision = 0
     for i, pre in precisions.items():
@@ -81,49 +83,102 @@ def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10):
     f_measure = (2 * total_precision * total_recall) / (total_recall + total_precision)
     print(f"Total weighted precision: {total_precision}, Total weighted recall: {total_recall}\nF1: {f_measure}")
 
+dataset = 'musicbrainz20k'
+learning = False
+pairs = None
 
-df = load_data(kind='musicbrainz20k')
+if dataset == 'musicbrainz20k':
+    df = load_data(kind='musicbrainz20k')
+    groupby_name = 'CID'
+    group = df.groupby([groupby_name])  # CID for musicbrainz, id for stoxx50
+    groundtruth = group.indices
+    myDedupliPy = Deduplicator(['title', 'artist', 'album'])  # ,voter: 'suburb', 'postcode'])
+    if learning:
+        myDedupliPy.fit(df)
+        with open('musicbrainz20kfulltest.pkl', 'wb') as f:
+            pickle.dump(myDedupliPy, f)
+    else:
+        with open('musicbrainz20kfulltest.pkl', 'rb') as f:
+            myDedupliPy = pickle.load(f)
+    myDedupliPy.verbose = True
+    pairs = pd.read_csv(os.path.join('./', 'scored_pairs_table_musicbrainz20k.csv'), sep="|")
+
+elif dataset == 'stoxx50':
+    df = load_data(kind='stoxx50')
+    groupby_name = 'id'
+    group = df.groupby([groupby_name])
+    groundtruth = group.indices
+    myDedupliPy = Deduplicator(['name'])
+    if learning:
+        myDedupliPy.fit(df)
+        with open('stoxx50.pkl', 'wb') as f:
+            pickle.dump(myDedupliPy, f)
+    else:
+        with open('stoxx50.pkl', 'rb') as f:
+            myDedupliPy = pickle.load(f)
+
+    myDedupliPy.verbose = True
+    #pairs = pd.read_csv(os.path.join('./', 'scored_pairs_table_stoxx50.csv'), sep="|")
+    myDedupliPy.save_intermediate_steps = True
+elif dataset == 'voters':
+    df = load_data(kind='voters5m')
+
+    group = df.groupby(['CID']) #UNKNOWN
+    groundtruth = group.indices
+    myDedupliPy = Deduplicator(['name', 'suburb', 'postcode'])
+    myDedupliPy.verbose = True
+    if learning:
+        myDedupliPy.fit(df)
+        with open('voters5m.pkl', 'wb') as f:
+            pickle.dump(myDedupliPy, f)
+    else:
+        with open('voters5m.pkl', 'rb') as f:
+            myDedupliPy = pickle.load(f)
+else:
+    print("unknown")
+    exit(0)
 
 amount = len(df)
-group = df.groupby(['CID'])  # CID for musicbrainz, id for stoxx50
-groundtruth = group.indices
-myDedupliPy = Deduplicator(['title', 'artist', 'album'])  # ,voter: 'suburb', 'postcode'])
+markov_col = 'deduplication_id_'+markov_clustering.__name__
+hierar_col = 'deduplication_id_'+hierarchical_clustering.__name__
+connected_col = 'deduplication_id_'+connected_components.__name__
 myDedupliPy.verbose = True
-#myDedupliPy.fit(df)
 
-#with open('musicbrainz20kfulltest.pkl', 'wb') as f:
-#    pickle.dump(myDedupliPy, f)
-with open('musicbrainz20kfulltest.pkl', 'rb') as f:
-    myDedupliPy = pickle.load(f)
+cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
+args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7},
+        markov_clustering.__name__: {'inflation': 2}}
+res = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
 
-myDedupliPy.verbose = True
-res = myDedupliPy.predict(df)
-res_mc = myDedupliPy.predict(df, clustering=markov_clustering)
-print(res.sort_values('deduplication_id').head(10))
-print(res_mc.sort_values('deduplication_id').head(10))
-sorted_res = res.sort_values('deduplication_id')
-sorted_res_mc = res_mc.sort_values('deduplication_id')
+sorted_actual = res.sort_values(groupby_name)
+sorted_res_cc = res.sort_values(connected_col)
+sorted_res = res.sort_values(hierar_col)
+sorted_res_mc = res.sort_values(markov_col)
+
+start_eval_0 = perf_counter()
+evaluate_(groundtruth, res, res.groupby([connected_col]).indices, amount, connected_col)
+stop_eval_0 = perf_counter()
+print(f'Evaluation 0 took:{stop_eval_0 - start_eval_0:.4f} seconds\n')
 
 start_eval_1 = perf_counter()
-evaluate_(groundtruth, res, res.groupby(['deduplication_id']).indices, amount)
+evaluate_(groundtruth, res, res.groupby([hierar_col]).indices, amount, hierar_col)
 stop_eval_1 = perf_counter()
-print(f'Evaluation 1 took:{stop_eval_1 - start_eval_1:.4f} seconds')
+print(f'Evaluation 1 took:{stop_eval_1 - start_eval_1:.4f} seconds\n')
 
 start_eval_2 = perf_counter()
-evaluate_(groundtruth, res_mc, res_mc.groupby(['deduplication_id']).indices, amount)
+evaluate_(groundtruth, res, res.groupby([markov_col]).indices, amount, markov_col)
 stop_eval_2 = perf_counter()
-print(f'Evaluation 2 took:{stop_eval_2 - start_eval_2:.4f} seconds')
+print(f'Evaluation 2 took:{stop_eval_2 - start_eval_2:.4f} seconds\n')
+#
+r0 = list(res.groupby([connected_col]).groups.values())
+r1 = list(res.groupby([hierar_col]).groups.values())
+r2 = list(res.groupby([markov_col]).groups.values())
 
-r1 = list(res.groupby(['deduplication_id']).groups.values())
-r2 = list(res_mc.groupby(['deduplication_id']).groups.values())
 s = list(group.groups.values())
-rs = [r1, r2]
+rs = [("Connected", r0), ("Hierarchical", r1), ("Markov", r2)]
 evaluations = ['precision', 'recall', 'f1', 'bmd']
 for r in rs:
+    print(f"Clustering method:{r[0]}")
     for eva in evaluations:
-        print(f"{eva}: {evaluate(r,s,eva)}")
-
-#print(evaluate(r, s, 'f1'))
-#print(evaluate(r2, s, 'f1'))
-
+        print(f"{eva}: {evaluate(r[1],s,eva)}")
+    print("----------------------------\n")
 print("done")
