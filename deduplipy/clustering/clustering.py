@@ -14,7 +14,7 @@ from deduplipy.clustering.fill_missing_edges import fill_missing_links
 
 
 def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
-                           clustering_algorithm, **args) -> pd.DataFrame:
+                           clustering_algorithm, use_cc=True, **args) -> pd.DataFrame:
     """
     Apply the basic steps to start clustering, then apply the given clusteringalgorithm to scored_pairs_table and
     perform the actual deduplication by adding a cluster id to each record
@@ -38,21 +38,54 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
 
     components = nx.connected_components(graph)
 
+    stats = {}
     clustering = {}
     cluster_counter = 0
-    for component in components:
-        subgraph = graph.subgraph(component)
+    if use_cc or clustering_algorithm.__name__ == 'connected_components':
+        for component in components:
+            subgraph = graph.subgraph(component)
+            if clustering_algorithm.__name__ in args['args']:
+                clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
+            else:
+                clusters = clustering_algorithm(subgraph)
+            clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
+
+            if clustering_algorithm.__name__ == 'connected_components':
+                clustcoefficient = nx.average_clustering(subgraph)
+                trans = nx.transitivity(subgraph)
+                ecc = nx.eccentricity(subgraph)
+                dia = nx.diameter(subgraph)
+                radius = nx.radius(subgraph)
+                nodecount = len(subgraph.nodes())
+                edgecount = subgraph.number_of_edges()
+                edgeweights = nx.get_edge_attributes(subgraph, 'score')
+                maxedgeweight = max(edgeweights.values())
+                minedgeweight = min(edgeweights.values())
+                avgedgeweight = sum(edgeweights.values()) / len(edgeweights)
+                stats[cluster_counter + 1] = {'clustcoefficient': clustcoefficient, 'transitivity': trans,
+                                              'eccentricity': ecc, 'diameter': dia, 'radius': radius,
+                                              'nodecount': nodecount,
+                                              'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
+                                              'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight}
+
+            cluster_counter += len(component)
+    else:
+        subgraph = graph
         if clustering_algorithm.__name__ in args['args']:
             clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
         else:
             clusters = clustering_algorithm(subgraph)
         clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
-        cluster_counter += len(component)
+
 
     df_clusters = pd.DataFrame.from_dict(clustering, orient='index',
                                          columns=[DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__])
     df_clusters.sort_values(DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__, inplace=True)
     df_clusters[ROW_ID] = df_clusters.index
+
+    if clustering_algorithm.__name__ == 'connected_components':
+        return df_clusters, stats
+
 
     return df_clusters
 
@@ -74,7 +107,7 @@ def hierarchical_clustering(subgraph, cluster_threshold: float = 0.5, fill_missi
     """
     if len(subgraph.nodes) > 1:
         adjacency = nx.to_numpy_array(subgraph, weight='score')
-        #if len(subgraph.nodes) > 8:
+        # if len(subgraph.nodes) > 8:
         #    print("Interesting component here!")
         if fill_missing:
             adjacency = fill_missing_links(adjacency)
@@ -101,9 +134,9 @@ def markov_clustering(subgraph, inflation: float = 2) -> np.ndarray:
         ndarray of clusters
 
     """
-    #if len(subgraph.nodes) < 2:
+    # if len(subgraph.nodes) < 2:
     #    print("En nu?")
-    #if len(subgraph.nodes) > 8:
+    # if len(subgraph.nodes) > 8:
     #    print("Interesting component here!")
     matrix = nx.to_scipy_sparse_matrix(subgraph, weight="score")
     result = mc.run_mcl(matrix, inflation=inflation)
@@ -126,6 +159,5 @@ def connected_components(subgraph) -> np.ndarray:
     Returns: a ndarray of 1's
 
     """
-
-    clusters = np.ones((len(subgraph.nodes), ), dtype=int)
+    clusters = np.ones((len(subgraph.nodes),), dtype=int)
     return clusters

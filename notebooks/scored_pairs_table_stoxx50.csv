@@ -1,0 +1,210 @@
+name_1|row_number_1|fingerprint|name_2|row_number_2|similarities|score
+adidas ag adi dassler strasse 1 91074 germany|0|1|adidas ag adi dassler strasse 1 91074 herzogenaurach|1|[86.98926334704446, 86.98926334704446]|0.874894069493627
+adidas ag adi dassler strasse 1 91074 germany|0|1|adidas ag adi dassler strasse 1 91074 herzogenaurach germany|2|[85.98938675684855, 85.98938675684855]|0.8587678419286531
+adidas ag adi dassler strasse 1 91074 herzogenaurach|1|1|adidas ag adi dassler strasse 1 91074 herzogenaurach germany|2|[92.99716977908022, 92.99716977908022]|0.9418730956142578
+airbus se 2333 cs leiden netherlands|3|2|airbus se 2333 cs netherlands|4|[88.73054762766155, 88.73054762766155]|0.8992109470903771
+airbus se 2333 cs leiden netherlands|3|2|airbus se leiden netherlands|5|[87.6745879929495, 87.6745879929495]|0.8850142350221224
+airbus se 2333 cs netherlands|4|2|airbus se leiden netherlands|5|[76.71526449383082, 76.71526449383082]|0.6243286316224769
+allianz se 80802 munich germany|6|3|allianz se koniginstrasse 28 munich germany|7|[72.85185156355041, 72.85185156355041]|0.4919015232310871
+allianz se 80802 munich germany|6|3|allianz se munich germany|8|[88.4003227170814, 88.4003227170814]|0.894947118421543
+allianz se koniginstrasse 28 munich germany|7|3|allianz se munich germany|8|[73.50139192206767, 73.50139192206767]|0.5146087570374308
+amadeus it group  s a  salvador de madariaga  1 28027|9|4|amadeus it group  s a  salvador de madariaga  1 28027 madrid|10|[93.99765789508524, 92.99768281109496]|0.9439431910788817
+amadeus it group  s a  salvador de madariaga  1 28027|9|4|amadeus it group  s a  salvador de madariaga  1 28027 madrid spain|11|[88.99778247513389, 87.99780739114362]|0.8932511953709154
+amadeus it group  s a  salvador de madariaga  1 28027 madrid|10|4|amadeus it group  s a  salvador de madariaga  1 28027 madrid spain|11|[94.99941629982644, 94.99941629982644]|0.955437961613767
+anheuser busch inbev sa nv 3000 leuven belgium|12|5|anheuser busch inbev sa nv brouwerijplein 1 3000 leuven belgium|13|[83.99151269024568, 83.99151269024568]|0.8213703674231861
+anheuser busch inbev sa nv 3000 leuven belgium|12|5|anheuser busch inbev sa nv brouwerijplein 1 leuven belgium|14|[80.9918158084512, 80.9918158084512]|0.7514022325955978
+anheuser busch inbev sa nv brouwerijplein 1 3000 leuven belgium|13|5|anheuser busch inbev sa nv brouwerijplein 1 leuven belgium|14|[95.99912005557732, 95.99912005557732]|0.961026188586989
+asml holding n v  de run 6501 5504 dr veldhoven netherlands|15|6|asml holding n v  de run 6501 veldhoven netherlands|16|[92.99654316036238, 92.99654316036238]|0.9418682971646918
+axa sa 25  avenue matignon 75008 paris france|17|7|axa sa 75008 paris france|19|[70.52160576306493, 71.51486781606584]|0.4359724920384639
+axa sa 75008 paris|18|7|axa sa 75008 paris france|19|[81.70480731442743, 81.70480731442743]|0.7695599203410695
+banco bilbao vizcaya argentaria  s a  48005 bilbao spain|20|8|banco bilbao vizcaya argentaria  s a  bilbao|21|[87.98673548939159, 87.98673548939159]|0.889382993556443
+banco bilbao vizcaya argentaria  s a  48005 bilbao spain|20|8|banco bilbao vizcaya argentaria  s a  plaza san nicolas  4 48005 spain|22|[77.99893341270688, 83.99885136753048]|0.785222290724624
+banco bilbao vizcaya argentaria  s a  bilbao|21|8|banco bilbao vizcaya argentaria  s a  plaza san nicolas  4 48005 spain|22|[71.98914721859312, 71.98914721859312]|0.46180966078834773
+banco santander  s a  28660|23|9|banco santander  s a  28660 madrid|24|[88.59802429610747, 87.60254087705009]|0.8878467327203671
+banco santander  s a  28660|23|9|banco santander  s a  28660 madrid spain|25|[80.63415694364838, 78.6431901055336]|0.701414209269637
+banco santander  s a  28660 madrid|24|9|banco santander  s a  28660 madrid spain|25|[91.89753268639828, 90.89864646154612]|0.9262235069789042
+bayer aktiengesellschaft|28|11|bayer aktiengesellschaft 51368 leverkusen germany|29|[65.45683669476468, 65.45683669476468]|0.2560301051270184
+bayer aktiengesellschaft 51368 leverkusen germany|29|11|bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|[80.99550842044599, 80.99550842044599]|0.7514986950152361
+bayerische motoren werke aktiengesellschaft munich germany|31|12|bayerische motoren werke aktiengesellschaft petuelring 130 80788 munich|32|[77.99928504515657, 77.99928504515657]|0.6654222586717952
+bayerische motoren werke aktiengesellschaft munich germany|31|12|bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|[88.99918421819147, 88.99918421819147]|0.9025655034382836
+bayerische motoren werke aktiengesellschaft petuelring 130 80788 munich|32|12|bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|[89.9999387281679, 89.9999387281679]|0.9142001410003066
+bnp paribas sa 16 boulevard des italiens 75009 france|34|13|bnp paribas sa 16 boulevard des italiens paris france|35|[90.99773264311443, 88.99778247513389]|0.9090953034017276
+crh plc stonemason s way 16 dublin ireland|37|14|crh plc stonemason s way 16 ireland|38|[90.91701874113454, 90.91701874113454]|0.9237412740228705
+daimler ag 70372 stuttgart germany|39|15|daimler ag germany|40|[67.11466315113681, 67.11466315113681]|0.30262423255901266
+daimler ag 70372 stuttgart germany|39|15|daimler ag mercedesstrasse 120 70372 stuttgart germany|41|[76.91423931361595, 76.91423931361595]|0.630832962447119
+danone s a  15  rue du helder 75439 paris france|42|16|danone s a  15  rue du helder paris france|43|[92.97908733885137, 92.97908733885137]|0.9417344764824988
+danone s a  15  rue du helder 75439 paris france|42|16|danone s a  75439 paris|44|[64.34663067659882, 64.34663067659882]|0.22758727115362903
+danone s a  15  rue du helder paris france|43|16|danone s a  75439 paris|44|[57.416993526811254, 57.416993526811254]|0.10054318748523924
+deutsche boerse|45|17|deutsche boerse 60485 frankfurt|46|[61.763840556088844, 61.763840556088844]|0.1703386690914067
+deutsche boerse|45|17|deutsche boerse frankfurt|47|[71.26596987241021, 71.26596987241021]|0.4367882450606029
+deutsche boerse 60485 frankfurt|46|17|deutsche boerse frankfurt|47|[88.4003227170814, 88.4003227170814]|0.894947118421543
+deutsche post ag platz der deutschen post|48|18|deutsche post ag platz der deutschen post 53113 germany|49|[84.97665444655237, 84.97665444655237]|0.8407001897001821
+deutsche post ag platz der deutschen post|48|18|deutsche post ag platz der deutschen post bonn germany|50|[85.9763797929824, 85.9763797929824]|0.8585470516761532
+deutsche post ag platz der deutschen post 53113 germany|49|18|deutsche post ag platz der deutschen post bonn germany|50|[91.99812324568617, 89.998164044693]|0.9200155007508689
+deutsche telekom ag 53113 bonn germany|51|19|deutsche telekom ag 53113 germany|52|[92.87348577250805, 92.87348577250805]|0.9409187275555388
+engie sa 1  place samuel de champlain 92400 courbevoie|55|21|engie sa 1  place samuel de champlain 92400 france|56|[87.9960048061809, 81.99627720575947]|0.814105399612379
+engie sa 1  place samuel de champlain 92400 courbevoie|55|21|engie sa 92400 courbevoie france|57|[57.90362967815591, 67.88701410542417]|0.24786236416454602
+engie sa 1  place samuel de champlain 92400 france|56|21|engie sa 92400 courbevoie france|57|[50.915260579068125, 61.896983449063214]|0.12066272126529248
+eni s p a  piazzale enrico mattei 1 rome italy|58|22|eni s p a  rm 00144 rome italy|59|[67.83144485198669, 61.84631736504669]|0.20719148060909742
+essilorluxottica 1 6 rue paul cezanne 75008 paris france|60|23|essilorluxottica 1 6 rue paul cezanne paris france|61|[93.99573240660233, 93.99573240660233]|0.9490640130442723
+fresenius se   co  kgaa else kroner strasse 1 61352 bad homburg vor der hohe germany|62|24|fresenius se   co  kgaa else kroner strasse 1 61352 germany|63|[82.99937712169304, 81.99938462625096]|0.783370384336234
+fresenius se   co  kgaa else kroner strasse 1 61352 bad homburg vor der hohe germany|62|24|fresenius se   co  kgaa else kroner strasse 1 bad homburg vor der hohe germany|64|[95.99998388325571, 95.99998388325571]|0.9610307136245924
+fresenius se   co  kgaa else kroner strasse 1 61352 germany|63|24|fresenius se   co  kgaa else kroner strasse 1 bad homburg vor der hohe germany|64|[78.99940713992471, 77.99941464448263]|0.6739176650628216
+iberdrola  s a  plaza euskadi 5 48009 bilbao spain|65|25|iberdrola  s a  plaza euskadi 5 bilbao spain|66|[93.98583109094102, 92.98598182401612]|0.9438562741893233
+industria de diseno textil  s a  avenida de la diputacion s n arteixo 15143 a coruna spain|67|26|industria de diseno textil  s a  avenida de la diputacion s n arteixo a coruna spain|68|[96.99999509516459, 95.99999514572991]|0.9624432426999063
+ing groep n v  bijlmerplein 888 1102 mg amsterdam|69|27|ing groep n v  bijlmerplein 888 1102 mg netherlands|70|[87.99512025924997, 77.99567477524428]|0.7447685568900041
+intesa sanpaolo s p a  piazza san carlo  156 to 10121 italy|71|28|intesa sanpaolo s p a  piazza san carlo  156 to 10121 turin|72|[92.99930207611389, 88.99933209434556]|0.9152608236950008
+intesa sanpaolo s p a  piazza san carlo  156 to 10121 turin|72|28|intesa sanpaolo s p a  turin|73|[63.76333672214509, 63.76333672214509]|0.21356513038488548
+kering sa 40 rue de sevres 75007 paris|74|29|kering sa 40 rue de sevres 75007 paris france|75|[91.95395846812346, 91.95395846812346]|0.9333504504880037
+koninklijke ahold delhaize n v   1506 ma zaandam netherlands|76|30|koninklijke ahold delhaize n v   provincialeweg 11|77|[66.99695820470592, 67.99691280477614]|0.3208600961401316
+koninklijke ahold delhaize n v   1506 ma zaandam netherlands|76|30|koninklijke ahold delhaize n v   provincialeweg 11 netherlands|78|[76.9995268956488, 77.99952075143644]|0.6568297359170894
+koninklijke ahold delhaize n v   provincialeweg 11|77|30|koninklijke ahold delhaize n v   provincialeweg 11 netherlands|78|[88.99595940625113, 88.99595940625113]|0.9025258312742437
+koninklijke philips n v  amstelplein 2 1096 bc|79|31|koninklijke philips n v  amstelplein 2 1096 bc amsterdam|80|[89.99090645383465, 89.99090645383465]|0.9141009976947567
+koninklijke philips n v  amstelplein 2 1096 bc|79|31|koninklijke philips n v  amstelplein 2 1096 bc netherlands|81|[87.99110853263834, 87.99110853263834]|0.8894431527805654
+koninklijke philips n v  amstelplein 2 1096 bc amsterdam|80|31|koninklijke philips n v  amstelplein 2 1096 bc netherlands|81|[88.99878299655015, 79.99890606431475]|0.7879671159847013
+l air liquide s a  75 quai d orsay 75007 france|82|32|l air liquide s a  75007 paris france|83|[75.95354479015415, 79.95109977910963]|0.6914885703720868
+l air liquide s a  75 quai d orsay 75007 france|82|32|l air liquide s a  paris france|84|[73.84982213291411, 70.85591042482301]|0.45099997815638393
+l air liquide s a  75007 paris france|83|32|l air liquide s a  paris france|84|[90.8153218120971, 90.8153218120971]|0.9227332356669358
+l oreal s a  41  rue martre 92117 clichy france|85|33|l oreal s a  92117 france|86|[68.5350816570631, 69.52834371006402]|0.369265195902942
+linde plc 10 priestley road surrey research park gu2 7xy guildford|87|34|linde plc 10 priestley road surrey research park gu2 7xy united kingdom|88|[88.99983529649342, 87.99983714709461]|0.8932783469679946
+lvmh moet hennessy   louis vuitton  societe europeenne 22  avenue montaigne 75008 france|89|35|lvmh moet hennessy   louis vuitton  societe europeenne 22  avenue montaigne paris|90|[90.99999161562324, 87.99999189203126]|0.9003815430477902
+lvmh moet hennessy   louis vuitton  societe europeenne 22  avenue montaigne 75008 france|89|35|lvmh moet hennessy   louis vuitton  societe europeenne 75008 france|91|[85.99986969760636, 85.99986969760636]|0.8589455778449359
+lvmh moet hennessy   louis vuitton  societe europeenne 22  avenue montaigne paris|90|35|lvmh moet hennessy   louis vuitton  societe europeenne 75008 france|91|[79.99987878847102, 73.9998878793357]|0.5886771951059734
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107|92|36|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 80802 munich|93|[91.99998455478672, 91.99998455478672]|0.9337497932567117
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107|92|36|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|[90.99998472266947, 90.99998472266947]|0.9245546962121418
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 80802 munich|93|36|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|[91.99999885282875, 91.99999885282875]|0.9337499169667993
+nokia corporation 2610 espoo finland|95|37|nokia corporation finland|96|[81.44748834607499, 81.44748834607499]|0.7631157061907563
+nokia corporation 2610 espoo finland|95|37|nokia corporation karakaari 7|97|[57.8244018247682, 61.8122916057867]|0.15064668271434223
+nokia corporation finland|96|37|nokia corporation karakaari 7|97|[69.52834371006402, 69.52834371006402]|0.3781891613898799
+orange s a  75015 paris france|98|38|orange s a  78  rue olivier de serres 75015 paris france|99|[69.82648734763336, 69.82648734763336]|0.3880440667760546
+orange s a  75015 paris france|98|38|orange s a  paris|100|[69.59712456285652, 68.63049783281684]|0.3576191558019451
+safran sa 75724 france|102|39|safran sa paris france|103|[76.05464482746373, 72.103754187076]|0.50365880838408
+sanofi 54  rue la boetie 75008 france|104|40|sanofi 54  rue la boetie 75008 paris france|105|[91.94376474597608, 91.94376474597608]|0.9332617033706296
+sanofi 54  rue la boetie 75008 france|104|40|sanofi 75008 france|106|[66.47878751378074, 67.45641674192458]|0.304796177107004
+sanofi 54  rue la boetie 75008 paris france|105|40|sanofi 75008 france|106|[59.6353829167739, 60.61301214491774]|0.14409097269456764
+sap se 69190|107|41|sap se 69190 germany|108|[68.19615350329407, 68.19615350329407]|0.33546517760033934
+schneider electric s e  35 rue joseph monier|110|42|schneider electric s e  35 rue joseph monier 92500 rueil malmaison|111|[79.98794135399235, 79.98794135399235]|0.7242610524840299
+schneider electric s e  35 rue joseph monier|110|42|schneider electric s e  92500 france|112|[71.94624582179688, 68.94848557922201]|0.3862111514026486
+schneider electric s e  35 rue joseph monier 92500 rueil malmaison|111|42|schneider electric s e  92500 france|112|[64.95147192245551, 63.95221850826389]|0.2246465001647532
+siemens aktiengesellschaft munich germany|113|43|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[66.98159821081187, 66.98159821081187]|0.29871095675971737
+siemens aktiengesellschaft munich germany|113|43|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[69.98077425010194, 69.98077425010194]|0.39318065830503035
+siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|43|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[94.99990351501025, 94.99990351501025]|0.9554408628697073
+societe generale societe 29  boulevard haussmann 75009 paris france|116|44|societe generale societe 75009 paris france|117|[77.98563974809393, 78.98545564230027]|0.6872090356596424
+telefonica  s a  28050 madrid|118|45|telefonica  s a  ronda de la comunicacion|119|[59.81834671527745, 60.81531916053207]|0.14752251739778627
+telefonica  s a  28050 madrid|118|45|telefonica  s a  ronda de la comunicacion 28050 madrid spain|120|[64.80320894155057, 63.806236496295945]|0.22109503123185184
+telefonica  s a  ronda de la comunicacion|119|45|telefonica  s a  ronda de la comunicacion 28050 madrid spain|120|[80.97775306083226, 79.97802771440223]|0.7315867125852744
+the unilever group weena 455 3000 dk netherlands|121|46|the unilever group weena 455 3000 dk rotterdam netherlands|122|[90.99383668497933, 90.99383668497933]|0.9244946934753578
+total s a  92078 france|124|47|total s a  paris|125|[59.4727433533413, 56.595029965276396]|0.10013733766001294
+vinci sa 1  cours ferdinand de lesseps 92851 france|126|48|vinci sa 1  cours ferdinand de lesseps france|127|[93.98839947841586, 93.98839947841586]|0.9490144099395129
+vinci sa 1  cours ferdinand de lesseps 92851 france|126|48|vinci sa 1  cours ferdinand de lesseps rueil malmaison france|128|[81.9969520338679, 79.99702637450527]|0.7395710811984567
+vinci sa 1  cours ferdinand de lesseps france|127|48|vinci sa 1  cours ferdinand de lesseps rueil malmaison france|128|[84.98951016665264, 84.98951016665264]|0.8409408463640198
+vivendi sa 42 avenue de friedland 75380 paris france|129|49|vivendi sa 75380 paris|130|[58.27563694571896, 58.27563694571896]|0.11193675568377244
+volkswagen ag 38440 germany|131|50|volkswagen ag berliner ring 2 38440|132|[60.72448856250063, 73.66577301024667]|0.39763178770302865
+volkswagen ag 38440 germany|131|50|volkswagen ag berliner ring 2 38440 wolfsburg|133|[57.738038305328466, 63.71093881967279]|0.1765087737383164
+volkswagen ag berliner ring 2 38440|132|50|volkswagen ag berliner ring 2 38440 wolfsburg|133|[87.9197543870312, 87.9197543870312]|0.8884579586080654
+adidas ag adi dassler strasse 1 91074 germany|0|any:0|basf se carl bosch strasse 38 67056 germany|27|[58.98913775817361, 56.98950596976095]|0.10208832254807389
+adidas ag adi dassler strasse 1 91074 germany|0|any:0|daimler ag mercedesstrasse 120 70372 stuttgart germany|41|[56.99296564116706, 58.99271882155889]|0.11429717783021733
+allianz se 80802 munich germany|6|any:0|siemens aktiengesellschaft munich germany|113|[55.88635188436744, 60.876204731185965]|0.1302299149698444
+allianz se munich germany|8|any:0|siemens aktiengesellschaft munich germany|113|[60.58898523305579, 66.54855755106128]|0.24180936291678454
+bayer aktiengesellschaft 51368 leverkusen germany|29|any:0|bayerische motoren werke aktiengesellschaft munich germany|31|[64.9963956460369, 70.99606293644031]|0.3723213573180193
+bayer aktiengesellschaft 51368 leverkusen germany|29|any:0|bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|[61.996562000835205, 66.99628474283804]|0.2605104525486079
+bayer aktiengesellschaft 51368 leverkusen germany|29|any:0|siemens aktiengesellschaft munich germany|113|[68.98104890367192, 68.98104890367192]|0.3603629490662392
+bayer aktiengesellschaft 51368 leverkusen germany|29|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[58.9967283556335, 60.996617452434634]|0.14587740383860417
+bayer aktiengesellschaft 51368 leverkusen germany|29|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[57.99678380723293, 57.99678380723293]|0.10811797089699204
+bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|any:0|bayerische motoren werke aktiengesellschaft munich germany|31|[54.9994958651745, 61.99943170256035]|0.13955524279211326
+bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|any:0|bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|[57.99996767135858, 61.9999654417971]|0.15397564859692478
+bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|any:0|siemens aktiengesellschaft munich germany|113|[56.98434474651159, 57.984070092941614]|0.10430634767951558
+bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[59.999939062111736, 60.99993804648027]|0.15078462940501824
+bayer aktiengesellschaft kaiser wilhelm allee 1 51368 leverkusen germany|30|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[60.999965999187474, 58.99996711396821]|0.13089997357523128
+bayerische motoren werke aktiengesellschaft munich germany|31|any:0|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|[59.99945003473582, 57.999468366911294]|0.11578544738155758
+bayerische motoren werke aktiengesellschaft munich germany|31|any:0|siemens aktiengesellschaft munich germany|113|[78.9783023679722, 72.97995028939204]|0.553737271969671
+bayerische motoren werke aktiengesellschaft munich germany|31|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[54.9994958651745, 59.99945003473582]|0.11691821955382906
+bayerische motoren werke aktiengesellschaft munich germany|31|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[57.999468366911294, 59.99945003473582]|0.12934289697524431
+bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|any:0|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|[60.99997216248916, 59.999972618841795]|0.14288329369131528
+bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|any:0|siemens aktiengesellschaft munich germany|113|[67.9813235572419, 64.98214751795182]|0.2654236018460522
+bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[57.99994109337468, 62.99993601521732]|0.167663243635759
+bayerische motoren werke aktiengesellschaft petuelring 130 munich germany|33|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[63.999970793431245, 61.99997170613652]|0.18642227674771994
+deutsche post ag platz der deutschen post 53113 germany|49|any:0|deutsche telekom ag 53113 bonn germany|51|[57.97097381686045, 61.96897201112668]|0.1534217674007543
+deutsche post ag platz der deutschen post 53113 germany|49|any:0|deutsche telekom ag 53113 germany|52|[60.91701754970958, 63.912936445596934]|0.19818921209435728
+deutsche post ag platz der deutschen post bonn germany|50|any:0|deutsche telekom ag 53113 bonn germany|51|[58.970473365427004, 58.970473365427004]|0.12196791030262934
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|any:0|siemens aktiengesellschaft munich germany|113|[57.984070092941614, 57.984070092941614]|0.10794662004580596
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 germany|114|[57.99994109337468, 61.9999370308488]|0.15397514011888777
+munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 munich germany|94|any:0|siemens aktiengesellschaft werner von siemens strasse 1 80333 munich germany|115|[63.99998397109522, 58.999985223353406]|0.1445676694331194
+ing groep n v  bijlmerplein 888 1102 mg netherlands|70|nds:0|koninklijke philips n v  amstelplein 2 1096 bc netherlands|81|[61.997695440241586, 57.99784412151632]|0.12385525300752559
+koninklijke ahold delhaize n v   1506 ma zaandam netherlands|76|nds:0|koninklijke philips n v  amstelplein 2 1096 bc netherlands|81|[63.99941337038488, 62.999422536472615]|0.2022926889863035
+koninklijke ahold delhaize n v   provincialeweg 11 netherlands|78|nds:0|koninklijke philips n v  amstelplein 2 1096 bc netherlands|81|[62.999422536472615, 64.99940420429714]|0.23015092031397144
+banco santander  s a  28660 madrid|24|rid:0|telefonica  s a  28050 madrid|118|[62.80926405104132, 57.8244018247682]|0.1253335400512756
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|bnp paribas sa 16 boulevard des italiens 75009 france|34|[50.993706099991584, 61.99234859214663]|0.12201553799658452
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|kering sa 40 rue de sevres 75007 paris france|75|[57.99284223136297, 57.99284223136297]|0.10806482221126458
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|l air liquide s a  75007 paris france|83|[60.962713581571094, 61.96210232880996]|0.16884107730103423
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|orange s a  75015 paris france|98|[60.84879611722335, 62.843838612870016]|0.18112274155707958
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|sanofi 54  rue la boetie 75008 france|104|[60.962713581571094, 59.96332483433223]|0.1422538403380066
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[69.98711259444327, 64.98803312341161]|0.28082516987952766
+axa sa 25  avenue matignon 75008 paris france|17|nce:0|vivendi sa 42 avenue de friedland 75380 paris france|129|[65.99185495293028, 66.99173154312619]|0.29102536387008665
+axa sa 75008 paris france|19|nce:0|essilorluxottica 1 6 rue paul cezanne 75008 paris france|60|[56.615937021052126, 58.60246112705396]|0.10893602674220337
+axa sa 75008 paris france|19|nce:0|kering sa 40 rue de sevres 75007 paris france|75|[59.59572318005487, 59.59572318005487]|0.13164700522118808
+axa sa 75008 paris france|19|nce:0|l air liquide s a  75007 paris france|83|[70.52160576306493, 71.51486781606584]|0.4359724920384639
+axa sa 75008 paris france|19|nce:0|l air liquide s a  paris france|84|[63.56877139205853, 61.5822472860567]|0.1776472434232367
+axa sa 75008 paris france|19|nce:0|orange s a  75015 paris france|98|[75.4879160280695, 73.50139192206767]|0.5336265757843793
+axa sa 75008 paris france|19|nce:0|safran sa 75724 france|102|[63.21425024620362, 59.26335960581589]|0.1441432960766562
+axa sa 75008 paris france|19|nce:0|safran sa paris france|103|[76.05464482746373, 63.21425024620362]|0.2916355289070937
+axa sa 75008 paris france|19|nce:0|sanofi 54  rue la boetie 75008 france|104|[51.64962675604755, 61.5822472860567]|0.12026558809173264
+axa sa 75008 paris france|19|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[64.56203344505944, 65.55529549806036]|0.2514180640872483
+axa sa 75008 paris france|19|nce:0|sanofi 75008 france|106|[66.47878751378074, 66.47878751378074]|0.2841904177113895
+axa sa 75008 paris france|19|nce:0|total s a  92078 france|124|[57.416993526811254, 63.356682512343454]|0.16960128033032984
+bnp paribas sa 16 boulevard des italiens 75009 france|34|nce:0|l air liquide s a  75007 paris france|83|[48.97004861470465, 60.962713581571094]|0.10380449776561818
+bnp paribas sa 16 boulevard des italiens 75009 france|34|nce:0|safran sa 2  boulevard du general martial valin paris france|101|[59.99850503941611, 56.9985797874453]|0.10578236732363128
+bnp paribas sa 16 boulevard des italiens 75009 france|34|nce:0|societe generale societe 29  boulevard haussmann 75009 paris france|116|[54.998629619464765, 60.998480123406374]|0.12779503669189043
+bnp paribas sa 16 boulevard des italiens paris france|35|nce:0|danone s a  15  rue du helder paris france|43|[58.98673282787345, 57.98695769519763]|0.11173836328985669
+bnp paribas sa 16 boulevard des italiens paris france|35|nce:0|safran sa 2  boulevard du general martial valin paris france|101|[68.99828079532853, 63.99840537537718]|0.25374139336403734
+danone s a  15  rue du helder 75439 paris france|42|nce:0|kering sa 40 rue de sevres 75007 paris france|75|[64.99197836273437, 61.99234859214663]|0.19214693851268752
+danone s a  15  rue du helder 75439 paris france|42|nce:0|l air liquide s a  75 quai d orsay 75007 france|82|[52.9956156245255, 60.994953832001045]|0.11942930887608882
+danone s a  15  rue du helder 75439 paris france|42|nce:0|l air liquide s a  75007 paris france|83|[53.966992350899, 60.962713581571094]|0.12305332547606347
+danone s a  15  rue du helder 75439 paris france|42|nce:0|orange s a  75015 paris france|98|[61.84631736504669, 55.861189878106686]|0.10164743734680576
+danone s a  15  rue du helder 75439 paris france|42|nce:0|orange s a  78  rue olivier de serres 75015 paris france|99|[66.99546217465512, 63.995665360864585]|0.23940977396919597
+danone s a  15  rue du helder 75439 paris france|42|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[65.98784901761795, 63.988217229205276]|0.23230277297074922
+danone s a  15  rue du helder 75439 paris france|42|nce:0|vivendi sa 42 avenue de friedland 75380 paris france|129|[61.995800818337564, 58.99600400454704]|0.13526360992087172
+danone s a  15  rue du helder paris france|43|nce:0|essilorluxottica 1 6 rue paul cezanne paris france|61|[60.98628309322509, 57.98695769519763]|0.11958686952729472
+danone s a  15  rue du helder paris france|43|nce:0|kering sa 40 rue de sevres 75007 paris france|75|[61.98605822590091, 60.98628309322509]|0.16062251429407834
+danone s a  15  rue du helder paris france|43|nce:0|l air liquide s a  75007 paris france|83|[55.96576984537674, 62.96149107604884]|0.1565311410604415
+danone s a  15  rue du helder paris france|43|nce:0|l air liquide s a  paris france|84|[54.888381315003734, 62.872145869913375]|0.1499882785059924
+danone s a  15  rue du helder paris france|43|nce:0|orange s a  75015 paris france|98|[66.83392360416336, 60.84879611722335]|0.18520739983044582
+danone s a  15  rue du helder paris france|43|nce:0|orange s a  78  rue olivier de serres 75015 paris france|99|[64.98538362392837, 63.985608491252556]|0.22546448579316997
+danone s a  15  rue du helder paris france|43|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[63.985608491252556, 62.985833358576734]|0.20198481773328997
+danone s a  15  rue du helder paris france|43|nce:0|total s a  2  place jean millier paris france|123|[63.985608491252556, 57.98695769519763]|0.1322498170246088
+essilorluxottica 1 6 rue paul cezanne 75008 paris france|60|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[66.98766491182427, 54.989874181348284]|0.11203634785187692
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|l air liquide s a  75007 paris france|83|[65.95965731776545, 56.96515859261561]|0.12907949359277243
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|orange s a  75015 paris france|98|[63.84135986069335, 61.84631736504669]|0.18315623729585526
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|orange s a  78  rue olivier de serres 75015 paris france|99|[72.99099108430167, 74.9907442646935]|0.5473564118806711
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|sanofi 54  rue la boetie 75008 france|104|[58.96393608709335, 58.96393608709335]|0.12187002578724986
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[67.9874808060306, 66.98766491182427]|0.3069931124123887
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|societe generale societe 75009 paris france|117|[58.98913775817361, 58.98913775817361]|0.12224775014825144
+kering sa 40 rue de sevres 75007 paris france|75|nce:0|vivendi sa 42 avenue de friedland 75380 paris france|129|[67.9916081333221, 63.992101772538454]|0.24637501415576954
+l air liquide s a  75007 paris france|83|nce:0|orange s a  75015 paris france|98|[71.82152984328002, 67.83144485198669]|0.3586083591603824
+l air liquide s a  75007 paris france|83|nce:0|orange s a  78  rue olivier de serres 75015 paris france|99|[59.96332483433223, 59.96332483433223]|0.13763666724910179
+l air liquide s a  75007 paris france|83|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[64.96026857052658, 58.96393608709335]|0.1487227006139391
+l air liquide s a  paris france|84|nce:0|l oreal s a  92117 france|86|[60.58898523305579, 58.60246112705396]|0.12464722124264441
+l air liquide s a  paris france|84|nce:0|orange s a  75015 paris france|98|[65.83640235634002, 63.84135986069335]|0.2286287403154777
+l air liquide s a  paris france|84|nce:0|total s a  2  place jean millier paris france|123|[57.88229302309485, 59.878234161822256]|0.12746287498030004
+l oreal s a  92117 france|86|nce:0|orange s a  75015 paris france|98|[61.5822472860567, 63.56877139205853]|0.19670149515590357
+l oreal s a  92117 france|86|nce:0|total s a  92078 france|124|[78.20590497617395, 73.25616415489712]|0.5533366989142628
+orange s a  75015 paris france|98|nce:0|safran sa paris france|103|[72.103754187076, 54.32474630533123]|0.12551512679698382
+orange s a  75015 paris france|98|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[62.843838612870016, 58.853753621576686]|0.13739696817865452
+orange s a  75015 paris france|98|nce:0|societe generale societe 75009 paris france|117|[62.843838612870016, 60.84879611722335]|0.16319745474839775
+orange s a  75015 paris france|98|nce:0|vivendi sa 42 avenue de friedland 75380 paris france|129|[55.861189878106686, 58.853753621576686]|0.1085994319740574
+orange s a  78  rue olivier de serres 75015 paris france|99|nce:0|sanofi 54  rue la boetie 75008 paris france|105|[60.988769546586276, 57.989321863967284]|0.11962218272567239
+safran sa 2  boulevard du general martial valin paris france|101|nce:0|societe generale societe 29  boulevard haussmann 75009 paris france|116|[56.99964977989586, 63.999606770409386]|0.17664667809690132
+safran sa 2  boulevard du general martial valin paris france|101|nce:0|total s a  2  place jean millier paris france|123|[60.992472001950716, 58.99271882155889]|0.13078361080414755
+safran sa 75724 france|102|nce:0|sanofi 75008 france|106|[61.59064137306157, 61.59064137306157]|0.1669424510245578
+sanofi 54  rue la boetie 75008 paris france|105|nce:0|societe generale societe 75009 paris france|117|[66.98766491182427, 58.98913775817361]|0.1591896274712978
+sanofi 54  rue la boetie 75008 paris france|105|nce:0|vivendi sa 42 avenue de friedland 75380 paris france|129|[58.98913775817361, 61.98858544079261]|0.15883303839808033
+axa sa 75008 paris|18|ris:0|bnp paribas sa paris|36|[56.41522409805703, 61.27860548582057]|0.13731282244297818
+axa sa 75008 paris|18|ris:0|danone s a  75439 paris|44|[61.27860548582057, 63.223958040925986]|0.18943491505173932
+axa sa 75008 paris|18|ris:0|orange s a  paris|100|[60.89748399249946, 57.03097707234076]|0.10941134765469322
+axa sa 75008 paris|18|ris:0|total s a  paris|125|[62.3504567414062, 58.51350555731966]|0.13118202697291165
+axa sa 75008 paris|18|ris:0|vivendi sa 75380 paris|130|[63.223958040925986, 58.36057665316245]|0.13324867125112314
+bnp paribas sa paris|36|ris:0|orange s a  paris|100|[57.03097707234076, 58.96423053242011]|0.11415231537184399
+danone s a  75439 paris|44|ris:0|orange s a  paris|100|[67.66387110277718, 65.73061764269782]|0.2780409671356346
+orange s a  paris|100|ris:0|total s a  paris|125|[75.77978588570907, 55.63579216925476]|0.15881759896039238
+bayerische motoren werke aktiengesellschaft petuelring 130 80788 munich|32|ich:0|munchener ruckversicherungs gesellschaft aktiengesellschaft koniginstrasse 107 80802 munich|93|[57.9999605137082, 61.999957790515666]|0.15397551165984108
+enel spa rome italy|53|aly:0|eni s p a  rm 00144 rome italy|59|[67.45641674192458, 60.61301214491774]|0.18520274449934201

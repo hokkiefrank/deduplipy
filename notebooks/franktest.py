@@ -1,7 +1,11 @@
+import json
 import statistics
+import time
 from statistics import mode
 from time import perf_counter
 import os
+
+import numpy as np
 from pkg_resources import resource_filename
 import pandas as pd
 from entity_resolution_evaluation.evaluation import evaluate
@@ -83,7 +87,7 @@ def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10, co
     f_measure = (2 * total_precision * total_recall) / (total_recall + total_precision)
     print(f"Total weighted precision: {total_precision}, Total weighted recall: {total_recall}\nF1: {f_measure}")
 
-dataset = 'musicbrainz20k'
+dataset = 'stoxx50'
 learning = False
 pairs = None
 
@@ -118,8 +122,8 @@ elif dataset == 'stoxx50':
             myDedupliPy = pickle.load(f)
 
     myDedupliPy.verbose = True
-    #pairs = pd.read_csv(os.path.join('./', 'scored_pairs_table_stoxx50.csv'), sep="|")
-    myDedupliPy.save_intermediate_steps = True
+    pairs = pd.read_csv(os.path.join('./', 'scored_pairs_table_stoxx50.csv'), sep="|")
+    #myDedupliPy.save_intermediate_steps = True
 elif dataset == 'voters':
     df = load_data(kind='voters5m')
 
@@ -147,38 +151,67 @@ myDedupliPy.verbose = True
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7},
         markov_clustering.__name__: {'inflation': 2}}
-res = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
+#res = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
+args['use_cc'] = True
+res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
 
 sorted_actual = res.sort_values(groupby_name)
 sorted_res_cc = res.sort_values(connected_col)
 sorted_res = res.sort_values(hierar_col)
 sorted_res_mc = res.sort_values(markov_col)
 
-start_eval_0 = perf_counter()
-evaluate_(groundtruth, res, res.groupby([connected_col]).indices, amount, connected_col)
-stop_eval_0 = perf_counter()
-print(f'Evaluation 0 took:{stop_eval_0 - start_eval_0:.4f} seconds\n')
-
-start_eval_1 = perf_counter()
-evaluate_(groundtruth, res, res.groupby([hierar_col]).indices, amount, hierar_col)
-stop_eval_1 = perf_counter()
-print(f'Evaluation 1 took:{stop_eval_1 - start_eval_1:.4f} seconds\n')
-
-start_eval_2 = perf_counter()
-evaluate_(groundtruth, res, res.groupby([markov_col]).indices, amount, markov_col)
-stop_eval_2 = perf_counter()
-print(f'Evaluation 2 took:{stop_eval_2 - start_eval_2:.4f} seconds\n')
-#
 r0 = list(res.groupby([connected_col]).groups.values())
 r1 = list(res.groupby([hierar_col]).groups.values())
 r2 = list(res.groupby([markov_col]).groups.values())
 
 s = list(group.groups.values())
-rs = [("Connected", r0), ("Hierarchical", r1), ("Markov", r2)]
+rs = [("Connected_Components", r0), ("Hierarchical", r1), ("Markov", r2)]
 evaluations = ['precision', 'recall', 'f1', 'bmd']
+result = {}
+result['config'] = args
+result['dataset'] = dataset
+print("----------------------------")
 for r in rs:
     print(f"Clustering method:{r[0]}")
+    result[r[0]] = {}
     for eva in evaluations:
-        print(f"{eva}: {evaluate(r[1],s,eva)}")
+        result[r[0]][eva] = evaluate(r[1],s,eva)
+        print(f"{eva}: {result[r[0]][eva]:.4f}")
     print("----------------------------\n")
+
+with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as outfile:
+    json.dump(result, outfile)
+
+markovwins = []
+hierarchicalwins = []
+modelstats = []
+labels = []
+for g in r0:
+    rows = res.loc[g]
+    connectid = rows[connected_col].iloc[0]
+    print(f"ccid:{connectid}")
+    gt = list(rows.groupby([groupby_name]).groups.values())
+    hgroup = list(rows.groupby([hierar_col]).groups.values())
+    hresult = evaluate(hgroup, gt, 'f1')
+
+    mgroup = list(rows.groupby([markov_col]).groups.values())
+    mresult = evaluate(mgroup, gt, 'f1')
+    print(f"Hierarchical - F1: {hresult:.4f}, Markov - F1: {mresult:.4f}")
+
+    if mresult > hresult:
+        print("MARKOV WINS")
+        if connectid in stat:
+            print(stat[connectid], "\n")
+        markovwins.append(connectid)
+        labels.append(1)
+
+    elif hresult > mresult:
+        print("Hierarchical wins-------------")
+        if connectid in stat:
+            print(stat[connectid], "\n")
+        hierarchicalwins.append(connectid)
+        labels.append(2)
+    else:
+        print("Draw...")
+        labels.append(0)
 print("done")

@@ -40,6 +40,7 @@ class Deduplicator:
         verbose: sets verbosity
 
     """
+
     def __init__(self, col_names: Optional[List[str]] = None, field_info: Optional[Dict] = None,
                  interaction: bool = False, rules: Union[List[Callable], Dict] = None, recall=1.0,
                  save_intermediate_steps: bool = False, verbose: Union[int, bool] = 0):
@@ -107,7 +108,7 @@ class Deduplicator:
         # the number of minhash samples can be (much) smaller than n_samples//2, in such case take more random pairs:
         n_samples_naive = n_samples - len(minhash_pairs)
         naive_pairs = NaiveSampler(self.col_names).sample(X, n_samples_naive)
-        pairs = naive_pairs#.append(minhash_pairs)
+        pairs = naive_pairs  # .append(minhash_pairs)
         return pairs.drop_duplicates()
 
     def _calculate_string_similarities(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -164,7 +165,8 @@ class Deduplicator:
         X.loc[X[col_name].isnull(), col_name] = np.arange(max_cluster_id + 1, max_cluster_id + 1 + n_missing)
         return X
 
-    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None, **args) -> pd.DataFrame:
+    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None,
+                **args) -> pd.DataFrame:
         """
         Predict on new data using the trained deduplicator.
 
@@ -181,9 +183,9 @@ class Deduplicator:
             deduplicated.
 
         """
-        #duplicates = X[X.duplicated(self.col_names)]
-        #df = X[self.col_names].drop_duplicates().copy()
+        # duplicates = X[X.duplicated(self.col_names)]
         df = X.copy()
+        #df = df[self.col_names].drop_duplicates().copy()
         df[ROW_ID] = np.arange(len(df))
         if self.verbose:
             print('blocking started')
@@ -192,7 +194,7 @@ class Deduplicator:
         if self.verbose:
             b_stop = perf_counter()
             print('blocking finished')
-            print(f'blocking took:{b_stop-b_start:.4f} seconds')
+            print(f'blocking took:{b_stop - b_start:.4f} seconds')
             print(f'Nr of pairs: {len(pairs_table)}')
             print('scoring started')
             s_start = perf_counter()
@@ -208,25 +210,33 @@ class Deduplicator:
         if self.verbose:
             s_stop = perf_counter()
             print("scoring finished")
-            print(f'scoring took:{s_stop-s_start:.4f} seconds')
+            print(f'scoring took:{s_stop - s_start:.4f} seconds')
         scored_pairs_table = scored_pairs_table[scored_pairs_table['score'] >= score_threshold]
         if self.verbose:
             print(f'Nr of filtered pairs: {len(scored_pairs_table)}')
         if self.save_intermediate_steps:
-            scored_pairs_table.to_csv('scored_pairs_table_musicbrainz20k.csv', index=None, sep="|")
+            scored_pairs_table.to_csv('scored_pairs_table.csv', index=None, sep="|")
         for methods in clustering:
             if self.verbose:
                 print(f'Clustering started for cluster method:{methods.__name__}')
                 c_start = perf_counter()
-            df_clusters = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
-                                             clustering_algorithm=methods, args=args['args'])
+            use_cc = True
+            if 'use_cc' in args['args']:
+                use_cc = args['args']['use_cc']
+            if methods.__name__ == 'connected_components':
+                df_clusters, stats = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
+                                                     clustering_algorithm=methods, use_cc=use_cc, args=args['args'])
+            else:
+                df_clusters = basic_clustering_steps(scored_pairs_table, col_names=self.col_names,
+                                                 clustering_algorithm=methods, use_cc=use_cc, args=args['args'])
             df_end = df.merge(df_clusters, on=ROW_ID, how='left')
             if self.verbose:
                 c_stop = perf_counter()
                 print(f'Clustering finished for cluster method:{methods.__name__}')
-                print(f'clustering took:{c_stop-c_start:.4f} seconds')
-            df = self._add_singletons(df_end, DEDUPLICATION_ID_NAME+"_"+methods.__name__)
+                print(f'clustering took:{c_stop - c_start:.4f} seconds')
+            df = self._add_singletons(df_end, DEDUPLICATION_ID_NAME + "_" + methods.__name__)
 
-            df[DEDUPLICATION_ID_NAME+"_"+methods.__name__] = df[DEDUPLICATION_ID_NAME+"_"+methods.__name__].astype(int)
+            df[DEDUPLICATION_ID_NAME + "_" + methods.__name__] = df[
+                DEDUPLICATION_ID_NAME + "_" + methods.__name__].astype(int)
         df = df.drop(columns=[ROW_ID])
-        return df
+        return df, stats
