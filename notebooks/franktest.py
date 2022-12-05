@@ -12,6 +12,17 @@ from entity_resolution_evaluation.evaluation import evaluate
 from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering, connected_components
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.metrics import accuracy_score
+
+from collections import Counter
+
+from numpy import mean
+from numpy import std
+
 import pickle
 
 
@@ -38,7 +49,8 @@ def mapping(gtc, data, fc, cn):
             clust_id = data.iloc[val][cn]
             if clust_id not in found_in:
                 # clust_size = len(data[data["deduplication_id"] == clust_id])
-                result = intersection(ground_cluster, data.index[data[cn] == clust_id].tolist())  # intersection between one of the foundclusters with the groundtruth cluster
+                result = intersection(ground_cluster, data.index[data[
+                                                                     cn] == clust_id].tolist())  # intersection between one of the foundclusters with the groundtruth cluster
                 results[clust_id] = len(result)  # / clust_size
             found_in.append(clust_id)
         f = max(results, key=results.get)
@@ -87,7 +99,8 @@ def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10, co
     f_measure = (2 * total_precision * total_recall) / (total_recall + total_precision)
     print(f"Total weighted precision: {total_precision}, Total weighted recall: {total_recall}\nF1: {f_measure}")
 
-dataset = 'stoxx50'
+
+dataset = 'musicbrainz20k'
 learning = False
 pairs = None
 
@@ -123,11 +136,11 @@ elif dataset == 'stoxx50':
 
     myDedupliPy.verbose = True
     pairs = pd.read_csv(os.path.join('./', 'scored_pairs_table_stoxx50.csv'), sep="|")
-    #myDedupliPy.save_intermediate_steps = True
+    # myDedupliPy.save_intermediate_steps = True
 elif dataset == 'voters':
     df = load_data(kind='voters5m')
 
-    group = df.groupby(['CID']) #UNKNOWN
+    group = df.groupby(['CID'])  # UNKNOWN
     groundtruth = group.indices
     myDedupliPy = Deduplicator(['name', 'suburb', 'postcode'])
     myDedupliPy.verbose = True
@@ -143,15 +156,15 @@ else:
     exit(0)
 
 amount = len(df)
-markov_col = 'deduplication_id_'+markov_clustering.__name__
-hierar_col = 'deduplication_id_'+hierarchical_clustering.__name__
-connected_col = 'deduplication_id_'+connected_components.__name__
+markov_col = 'deduplication_id_' + markov_clustering.__name__
+hierar_col = 'deduplication_id_' + hierarchical_clustering.__name__
+connected_col = 'deduplication_id_' + connected_components.__name__
 myDedupliPy.verbose = True
 
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
-args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7},
+args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.5},
         markov_clustering.__name__: {'inflation': 2}}
-#res = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
+# res = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
 args['use_cc'] = True
 res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, args=args)
 
@@ -175,7 +188,7 @@ for r in rs:
     print(f"Clustering method:{r[0]}")
     result[r[0]] = {}
     for eva in evaluations:
-        result[r[0]][eva] = evaluate(r[1],s,eva)
+        result[r[0]][eva] = evaluate(r[1], s, eva)
         print(f"{eva}: {result[r[0]][eva]:.4f}")
     print("----------------------------\n")
 
@@ -184,10 +197,15 @@ with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as
 
 markovwins = []
 hierarchicalwins = []
-modelstats = []
+max_cluster_id = res[connected_col].nunique()
+modelstats = np.empty((len(stat), 9))
+modelstatspy = []
 labels = []
+counter = 0
 for g in r0:
     rows = res.loc[g]
+    if len(rows) < 2:
+        continue
     connectid = rows[connected_col].iloc[0]
     print(f"ccid:{connectid}")
     gt = list(rows.groupby([groupby_name]).groups.values())
@@ -213,5 +231,51 @@ for g in r0:
         labels.append(2)
     else:
         print("Draw...")
+        continue
         labels.append(0)
+
+    if connectid in stat:
+        result_ = stat[connectid].values()
+
+        # Convert object to a list
+        data_ = list(result_)
+        modelstatspy.append(data_)
+        # Convert list to an array
+        numpyArray = np.array(data_)
+        modelstats[counter] = numpyArray
+        counter += 1
+    else:
+        d = {'clustcoefficient': 0, 'transitivity': 0,
+             'diameter': 0, 'radius': 0,
+             'nodecount': 1,
+             'edgecount': 0, 'maxedgeweight': 0,
+             'minedgeweight': 0, 'avgedgeweight': 0}
+        data_ = list(d.values())
+        modelstatspy.append(data_)
+        # Convert list to an array
+        numpyArray = np.array(data_)
+        modelstats[counter] = numpyArray
+        counter += 1
+
+
+labels = np.array(labels)
+print(modelstats.shape, labels.shape)
+print(Counter(labels))
+modelstats = np.array(modelstatspy)
+print(modelstats.shape, labels.shape)
+
+X_train, X_test, Y_train, Y_test = train_test_split(modelstats, labels, test_size=0.20)
+model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
+model = model.fit(X_train, Y_train)
+
+output2 = model.predict(X_test)
+print(accuracy_score(Y_test, output2))
+print(model.intercept_)
+print(model.coef_)
+print(model.classes_)
+print(Counter(output2))
+
+#cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+#n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
+#print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
 print("done")

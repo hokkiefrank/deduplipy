@@ -53,7 +53,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
             if clustering_algorithm.__name__ == 'connected_components':
                 clustcoefficient = nx.average_clustering(subgraph)
                 trans = nx.transitivity(subgraph)
-                ecc = nx.eccentricity(subgraph)
+                #ecc = nx.eccentricity(subgraph)
                 dia = nx.diameter(subgraph)
                 radius = nx.radius(subgraph)
                 nodecount = len(subgraph.nodes())
@@ -63,7 +63,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
                 minedgeweight = min(edgeweights.values())
                 avgedgeweight = sum(edgeweights.values()) / len(edgeweights)
                 stats[cluster_counter + 1] = {'clustcoefficient': clustcoefficient, 'transitivity': trans,
-                                              'eccentricity': ecc, 'diameter': dia, 'radius': radius,
+                                              'diameter': dia, 'radius': radius,
                                               'nodecount': nodecount,
                                               'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
                                               'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight}
