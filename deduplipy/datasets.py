@@ -18,8 +18,9 @@ def load_voters() -> pd.DataFrame:
     return df
 
 
-def load_music_20k() -> pd.DataFrame:
-    filepath = resource_filename('deduplipy', os.path.join('data', 'musicbrainz_20k.csv'))
+def load_musick(amount) -> pd.DataFrame:
+    filename = 'musicbrainz_'+(str(amount))+'k.csv'
+    filepath = resource_filename('deduplipy', os.path.join('data', filename))
     df = pd.read_csv(filepath)
     df = df[['CID', 'title', 'artist', 'album']]
     #lengte1 = len(df)
@@ -69,6 +70,8 @@ def load_data(kind: str = 'voters') -> pd.DataFrame:
     elif kind == 'voters':
         return load_voters()
     elif kind == 'musicbrainz20k':
-        return load_music_20k()
+        return load_musick(20)
+    elif kind == 'musicbrainz200k':
+        return load_musick(200)
     elif kind == 'voters5m':
         return load_voters_5m()

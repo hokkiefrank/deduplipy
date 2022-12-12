@@ -53,7 +53,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
             if clustering_algorithm.__name__ == 'connected_components':
                 clustcoefficient = nx.average_clustering(subgraph)
                 trans = nx.transitivity(subgraph)
-                #ecc = nx.eccentricity(subgraph)
+                # ecc = nx.eccentricity(subgraph)
                 dia = nx.diameter(subgraph)
                 radius = nx.radius(subgraph)
                 nodecount = len(subgraph.nodes())
@@ -62,11 +62,23 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
                 maxedgeweight = max(edgeweights.values())
                 minedgeweight = min(edgeweights.values())
                 avgedgeweight = sum(edgeweights.values()) / len(edgeweights)
+                density = nx.density(subgraph)
+                all_degrees = degrees = [val for (node, val) in subgraph.degree()]
+                maxdegree = max(all_degrees)
+                mindegree = min(all_degrees)
+                avgdegree = sum(all_degrees) / len(all_degrees)
+                # above or below a threshold for a feature (like density or something)
+                # Number of self-loops
+                # Number of triangle
+                # Connectivity
+                # Centralitiy
                 stats[cluster_counter + 1] = {'clustcoefficient': clustcoefficient, 'transitivity': trans,
                                               'diameter': dia, 'radius': radius,
                                               'nodecount': nodecount,
                                               'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
-                                              'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight}
+                                              'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight,
+                                              'density': density, 'maxdegree': maxdegree, 'mindegree': mindegree,
+                                              'avgdegree': avgdegree}
 
             cluster_counter += len(component)
     else:
@@ -77,7 +89,6 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
             clusters = clustering_algorithm(subgraph)
         clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
 
-
     df_clusters = pd.DataFrame.from_dict(clustering, orient='index',
                                          columns=[DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__])
     df_clusters.sort_values(DEDUPLICATION_ID_NAME + "_" + clustering_algorithm.__name__, inplace=True)
@@ -85,7 +96,6 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
 
     if clustering_algorithm.__name__ == 'connected_components':
         return df_clusters, stats
-
 
     return df_clusters
 
