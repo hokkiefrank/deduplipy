@@ -5,6 +5,7 @@ import numpy
 import pandas as pd
 import numpy as np
 import networkx as nx
+import itertools
 from scipy.cluster import hierarchy
 import markov_clustering as mc
 import scipy.spatial.distance as ssd
@@ -20,7 +21,8 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
     perform the actual deduplication by adding a cluster id to each record
 
     Args:
-        scored_pairs_table: Pandas dataframe containg all pairs and the similarity probability score
+        use_cc: Boolean that indicates whether Connected Components is used before clustering.
+        scored_pairs_table: Pandas dataframe containing all pairs and the similarity probability score
         col_names: name to use for deduplication
         clustering_algorithm: the clustering algorithm that has to be used
         **args: the named args for the clustering algorithm
@@ -41,9 +43,11 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
     stats = {}
     clustering = {}
     cluster_counter = 0
-    if use_cc or clustering_algorithm.__name__ == 'connected_components':
+    if (use_cc and clustering_algorithm.__name__ != 'markov_clustering') or clustering_algorithm.__name__ == 'connected_components':
+        print(f"There are {nx.number_connected_components(graph)} components")
         for component in components:
             subgraph = graph.subgraph(component)
+            #print(f"This component has {len(subgraph.nodes())} nodes")
             if clustering_algorithm.__name__ in args['args']:
                 clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
             else:
@@ -51,34 +55,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
             clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
 
             if clustering_algorithm.__name__ == 'connected_components':
-                clustcoefficient = nx.average_clustering(subgraph)
-                trans = nx.transitivity(subgraph)
-                # ecc = nx.eccentricity(subgraph)
-                dia = nx.diameter(subgraph)
-                radius = nx.radius(subgraph)
-                nodecount = len(subgraph.nodes())
-                edgecount = subgraph.number_of_edges()
-                edgeweights = nx.get_edge_attributes(subgraph, 'score')
-                maxedgeweight = max(edgeweights.values())
-                minedgeweight = min(edgeweights.values())
-                avgedgeweight = sum(edgeweights.values()) / len(edgeweights)
-                density = nx.density(subgraph)
-                all_degrees = degrees = [val for (node, val) in subgraph.degree()]
-                maxdegree = max(all_degrees)
-                mindegree = min(all_degrees)
-                avgdegree = sum(all_degrees) / len(all_degrees)
-                # above or below a threshold for a feature (like density or something)
-                # Number of self-loops
-                # Number of triangle
-                # Connectivity
-                # Centralitiy
-                stats[cluster_counter + 1] = {'clustcoefficient': clustcoefficient, 'transitivity': trans,
-                                              'diameter': dia, 'radius': radius,
-                                              'nodecount': nodecount,
-                                              'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
-                                              'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight,
-                                              'density': density, 'maxdegree': maxdegree, 'mindegree': mindegree,
-                                              'avgdegree': avgdegree}
+                stats[cluster_counter + 1] = get_cluster_stats(subgraph)
 
             cluster_counter += len(component)
     else:
@@ -117,8 +94,6 @@ def hierarchical_clustering(subgraph, cluster_threshold: float = 0.5, fill_missi
     """
     if len(subgraph.nodes) > 1:
         adjacency = nx.to_numpy_array(subgraph, weight='score')
-        # if len(subgraph.nodes) > 8:
-        #    print("Interesting component here!")
         if fill_missing:
             adjacency = fill_missing_links(adjacency)
         distances = (np.ones_like(adjacency) - np.eye(len(adjacency))) - adjacency
@@ -127,7 +102,7 @@ def hierarchical_clustering(subgraph, cluster_threshold: float = 0.5, fill_missi
         clusters = hierarchy.fcluster(linkage, t=1 - cluster_threshold, criterion='distance')
     else:
         clusters = np.array([1])
-
+    #get_consistency(subgraph, clusters, adjacency)
     return clusters
 
 
@@ -144,10 +119,6 @@ def markov_clustering(subgraph, inflation: float = 2) -> np.ndarray:
         ndarray of clusters
 
     """
-    # if len(subgraph.nodes) < 2:
-    #    print("En nu?")
-    # if len(subgraph.nodes) > 8:
-    #    print("Interesting component here!")
     matrix = nx.to_scipy_sparse_matrix(subgraph, weight="score")
     result = mc.run_mcl(matrix, inflation=inflation)
     mc_clusters = mc.get_clusters(result)
@@ -166,8 +137,89 @@ def connected_components(subgraph) -> np.ndarray:
     """
     As the connected components algorithm is already in the base step of clustering, all it has to do is return
     an array of 1's, indicating that the entire component found is a cluster. Purely for baseline
-    Returns: a ndarray of 1's
+
+    Returns:
+        a ndarray of 1's
 
     """
     clusters = np.ones((len(subgraph.nodes),), dtype=int)
     return clusters
+
+
+def get_consistency(subgraph, clustering, adjac):
+    """
+
+    Args:
+        subgraph: the subgraph (Component) from which the cluster is obtained
+        cluster: (one of) the clusters obtained from the connected component
+
+    Returns:
+
+    """
+    # this gets all the triangles present in the Component
+    all_triangles = nx.enumerate_all_cliques(subgraph)
+    existing_triads = [x for x in all_triangles if len(x) == 3]
+    #adj = nx.to_numpy_array(subgraph, weight='score')
+    pdf = pd.DataFrame(clustering)
+    clusters = pdf.groupby([0]).groups.values()
+    for cluster in clusters:
+        if len(cluster) < 3:
+            continue
+        tris = []
+        for comb in itertools.combinations(cluster, 3):
+            e1 = adjac[comb[0], comb[1]]
+            e2 = adjac[comb[0], comb[2]]
+            e3 = adjac[comb[1], comb[2]]
+            tris.append(comb)
+    return
+
+
+def center_clustering(subgraph):
+    edgelist = subgraph.edges
+
+
+def get_cluster_stats(subgraph) -> dict:
+    """
+
+    Args:
+        subgraph: The subgraph for which the stats have to be collected
+
+    Returns:
+        A dictionary with the stats in it
+    """
+    #return {}
+    clustcoefficient = nx.average_clustering(subgraph)
+    trans = nx.transitivity(subgraph)
+    # ecc = nx.eccentricity(subgraph)
+    dia = nx.diameter(subgraph)
+    radius = nx.radius(subgraph)
+    nodecount = len(subgraph.nodes())
+    edgecount = subgraph.number_of_edges()
+    edgeweights = nx.get_edge_attributes(subgraph, 'score')
+    maxedgeweight = max(edgeweights.values())
+    minedgeweight = min(edgeweights.values())
+    avgedgeweight = sum(edgeweights.values()) / len(edgeweights)
+    density = nx.density(subgraph)
+    all_degrees = [val for (node, val) in subgraph.degree()]
+    maxdegree = max(all_degrees)
+    mindegree = min(all_degrees)
+    avgdegree = sum(all_degrees) / len(all_degrees)
+    # above or below a threshold for a feature (like density or something)
+    # Number of triangle
+    ts = nx.triangles(subgraph)
+    triangles = sum(ts.values()) / 3
+    # Connectivity
+    # connectivity = nx.average_node_connectivity(subgraph)
+    # Centralitiy
+    centrality = nx.harmonic_centrality(subgraph, distance='score')
+    avgcentral = sum(centrality.values()) / len(centrality)
+    stat = {'clustcoefficient': clustcoefficient, 'transitivity': trans,
+            'diameter': dia, 'radius': radius,
+            'nodecount': nodecount,
+            'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
+            'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight,
+            'density': density, 'maxdegree': maxdegree, 'mindegree': mindegree,
+            'avgdegree': avgdegree, 'triangles': triangles,  # 'connectivity': connectivity,
+            'centrality': avgcentral}
+
+    return stat
