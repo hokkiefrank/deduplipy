@@ -185,11 +185,13 @@ markov_col = 'deduplication_id_' + markov_clustering.__name__
 hierar_col = 'deduplication_id_' + hierarchical_clustering.__name__
 connected_col = 'deduplication_id_' + connected_components.__name__
 myDedupliPy.verbose = True
-
+score_thresh = 0.35
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
-args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.5, 'fill_missing': True},
-        markov_clustering.__name__: {'inflation': 2}, 'use_cc': True}
-res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=0.35, args=args)
+cluster_algo_names = [name.__name__ for name in cluster_algos]
+args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
+        markov_clustering.__name__: {'inflation': 2}, 'use_cc': True,
+        'score_threshold': score_thresh}
+res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh, args=args)
 
 sorted_actual = res.sort_values(groupby_name)
 sorted_res_cc = res.sort_values(connected_col)
@@ -200,10 +202,12 @@ r0 = list(res.groupby([connected_col]).groups.values())
 r1 = list(res.groupby([hierar_col]).groups.values())
 r2 = list(res.groupby([markov_col]).groups.values())
 r3 = []
+r4 = []
 s = list(group.groups.values())
 rs = [("Connected_Components", r0), ("Hierarchical", r1), ("Markov", r2)]
 evaluations = ['precision', 'recall', 'f1', 'bmd']
 result = {}
+result['changes_description'] = input("Please give a short description as to what this experiment entails")
 result['config'] = args
 result['dataset'] = dataset
 result['scored_pairs_table'] = pairs_name
@@ -212,9 +216,13 @@ print("----------------------------")
 markovwins = []
 hierarchicalwins = []
 draws = []
+allwins = {'draw': []}
+for names in cluster_algo_names:
+    allwins[names] = []
 max_cluster_id = res[connected_col].nunique()
 xfxf = list(stat)[0]
 modelstats = np.empty((len(stat), len(stat[xfxf])))
+connectids = []
 modelstatspy = []
 labels = []
 counter = 0
@@ -227,7 +235,7 @@ def get_cluster_column_name(clusteringalgorithm: type(abs)) -> str:
 
 def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importance: dict, algo_names: list) -> str:
     evaluation_metrics_importance = dict(sorted(evaluation_metrics_importance.items(), key=operator.itemgetter(1)))
-    algo_names = [name.__name__ for name in algo_names if name.__name__ != 'connected_components']
+    algo_names = [name.__name__ for name in algo_names]# if name.__name__ != 'connected_components']
     losers = []
     for metricName in evaluation_metrics_importance.keys():
         func = max
@@ -268,14 +276,13 @@ for g in r0:
 
     mgroup = list(rows.groupby([markov_col]).groups.values())
     mresult = evaluate(mgroup, gt, 'f1')
-    temp = {}
-    temp['hierarchical'] = {}
-    temp['markov'] = {}
+    temp = {'hierarchical': {}, 'markov': {}}
+
     cluster_groups = {}
     for cluster_algo in cluster_algos:
         algorith_name = cluster_algo.__name__
-        if algorith_name == 'connected_components':
-            continue
+        #if algorith_name == 'connected_components':
+        #    continue
         cluster_groups[algorith_name] = list(rows.groupby([get_cluster_column_name(cluster_algo)]).groups.values())
         for eva in evaluations:
             if eva not in temp:
@@ -287,23 +294,28 @@ for g in r0:
             # print(f"{eva} - Markov: {evaluate(mgroup, gt, eva):.4f}")
     algo_winner = select_winner(temp, eval_prios, cluster_algos)
     if algo_winner == 'connected_components':
-        pass
+        allwins[algo_winner].append(stat[connectid])
+        for gs in cluster_groups[algo_winner]:
+            r3.append(gs)
+        #continue
+        labels.append(0)
     elif algo_winner == 'markov_clustering':
         markovwins.append(stat[connectid])
-        for gs in mgroup:
+        allwins[algo_winner].append(stat[connectid])
+        for gs in cluster_groups[algo_winner]:
             r3.append(gs)
         labels.append(1)
     elif algo_winner == 'hierarchical_clustering':
-        hierarchicalwins.append(stat[connectid])
-        for gs in hgroup:
+        allwins[algo_winner].append(stat[connectid])
+        for gs in cluster_groups[algo_winner]:
             r3.append(gs)
         labels.append(2)
     elif algo_winner == 'draw':
-        draws.append(stat[connectid])
-        for gs in mgroup:
+        allwins[algo_winner].append(stat[connectid])
+        for gs in cluster_groups[random.choice(cluster_algo_names)]:
             r3.append(gs)
-        continue
-        labels.append(0)
+        #continue
+        labels.append(3)
 
 
     #if mresult > hresult:
@@ -376,6 +388,7 @@ for g in r0:
         # Convert list to an array
         numpyArray = np.array(data_)
         modelstats[counter] = numpyArray
+        connectids.append(connectid)
         counter += 1
     else:
         d = {'clustcoefficient': 0, 'transitivity': 0,
@@ -395,6 +408,8 @@ markovwins = pd.DataFrame(markovwins)
 hierarchicalwins = pd.DataFrame(hierarchicalwins)
 draws = pd.DataFrame(draws)
 
+for keys in allwins.keys():
+    allwins[keys] = pd.DataFrame(allwins[keys])
 
 def is_outlier(points, thresh=3.5):
     """
@@ -430,23 +445,19 @@ def is_outlier(points, thresh=3.5):
     return modified_z_score > thresh
 
 
-# for (columnname, columndata) in markovwins.iteritems():
-#    #temp_df = pd.DataFrame(columns=[columnname+"_Draw", columnname+"_Markov", columnname+"_Hierar"])
-#    temp_df = pd.DataFrame(columns=['variable', 'value'])
-#    markovvalues = pd.DataFrame(markovwins[columnname]).rename(columns={columnname: columnname+"_Markov"}).melt()
-#    temp_df = pd.concat([temp_df, markovvalues])
-#    hierarvalues = pd.DataFrame(hierarchicalwins[columnname]).rename(columns={columnname: columnname+"_Hierar"}).melt()
-#    temp_df = pd.concat([temp_df, hierarvalues])
-#    #drawvalues = pd.DataFrame(draws[columnname]).rename(columns={columnname: columnname+"_Draw"}).melt()
-#    #temp_df = pd.concat([temp_df, drawvalues])
-#    #temp_df[columnname+"_Markov"] = columndata
-#    #temp_df[columnname+"_Hierar"] = hierarchicalwins[columnname]
-#    #temp_df[columnname+"_Draw"] = draws[columnname]
-#    #temp_df['value'] = temp_df['value'].astype(float)
-#    #melted_adjusted = temp_df[~is_outlier(temp_df['value'], 4.0)]
-#    plot = sns.histplot(temp_df, x='value', hue='variable', multiple='dodge', shrink=.75, bins=20 )
-#    #ax = temp_df.plot.hist(bins=20, alpha=0.5)
-#    plt.show()
+for (columnname, columndata) in markovwins.iteritems():
+    #temp_df = pd.DataFrame(columns=[columnname+"_Draw", columnname+"_Markov", columnname+"_Hierar"])
+    temp_df = pd.DataFrame(columns=['variable', 'value'])
+    for key in allwins.keys():
+        if key == 'draw':
+            continue
+        temp = pd.DataFrame(allwins[key][columnname]).rename(columns={columnname: columnname+f"_{key}"}).melt()
+        temp_df = pd.concat([temp_df, temp])
+    #temp_df['value'] = temp_df['value'].astype(float)
+    #melted_adjusted = temp_df[~is_outlier(temp_df['value'], 4.0)]
+    plot = sns.histplot(temp_df, x='value', hue='variable', multiple='dodge', shrink=.75, bins=20 )
+    #ax = temp_df.plot.hist(bins=20, alpha=0.5)
+    plt.show()
 
 labels = np.array(labels)
 print(modelstats.shape, labels.shape)
@@ -455,12 +466,12 @@ print(f"Amount of records per classlabel:{Counter(labels)}")
 modelstats = np.array(modelstatspy)
 print(modelstats.shape, labels.shape)
 
-skb = SelectKBest(chi2, k=4)
-new_modelstats = skb.fit_transform(modelstats, labels)
+X_train, X_test, Y_train, Y_test = train_test_split(modelstats, labels, test_size=0.3, stratify=labels)
+
+skb = SelectKBest(chi2, k=6)
+new_modelstats = skb.fit_transform(X_train, Y_train)
 supp = skb.get_support(indices=True)
 print(supp)
-
-X_train, X_test, Y_train, Y_test = train_test_split(new_modelstats, labels, test_size=0.2, stratify=labels)
 
 model = LogisticRegression()  # , multi_class='multinomial')
 print(f"Amount of records per classlabel in the trainingset:{Counter(Y_train)}")
@@ -476,7 +487,7 @@ output2 = model.predict(X_test)
 acc_score = accuracy_score(Y_test, output2)
 cfmatrix = confusion_matrix(Y_test, output2)
 result['model'] = {}
-result['model']['selected_features'] = supp
+result['model']['selected_features'] = supp.tolist()
 result['model']['records_per_class'] = str(Counter(labels))
 result['model']['accuracy_test_score'] = acc_score
 result['model']['intercept'] = model.intercept_.tolist()
@@ -494,6 +505,26 @@ cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
 n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
 print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
 
+
+all_predictions = model.predict(modelstats)
+acc_score = accuracy_score(labels, all_predictions)
+for i in range(len(all_predictions)):
+    label = all_predictions[i]
+    conid = connectids[i]
+    if label == 0:
+        columnname = connected_col
+    elif label == 1:
+        columnname = markov_col
+    elif label == 2:
+        columnname = hierar_col
+    elif label == 3:
+        columnname = markov_col
+
+    clusters_ = list(res[res[connected_col] == conid].groupby([columnname]).groups.values())
+    for gs in clusters_:
+        r4.append(gs)
+
+rs.append(("Predicted clustering", list(r4)))
 for r in rs:
     print(f"Clustering method:{r[0]}")
     result[r[0]] = {}
@@ -504,4 +535,5 @@ for r in rs:
 
 with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as outfile:
     json.dump(result, outfile)
+
 print("done")

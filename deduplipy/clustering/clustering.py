@@ -47,7 +47,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
         print(f"There are {nx.number_connected_components(graph)} components")
         for component in components:
             subgraph = graph.subgraph(component)
-            #print(f"This component has {len(subgraph.nodes())} nodes")
+            # print(f"This component has {len(subgraph.nodes())} nodes")
             if clustering_algorithm.__name__ in args['args']:
                 clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
             else:
@@ -100,9 +100,11 @@ def hierarchical_clustering(subgraph, cluster_threshold: float = 0.5, fill_missi
         condensed_distance = ssd.squareform(distances)
         linkage = hierarchy.linkage(condensed_distance, method='centroid')
         clusters = hierarchy.fcluster(linkage, t=1 - cluster_threshold, criterion='distance')
+
+        # get_consistency(subgraph, clusters, adjacency)
     else:
         clusters = np.array([1])
-    #get_consistency(subgraph, clusters, adjacency)
+
     return clusters
 
 
@@ -159,18 +161,38 @@ def get_consistency(subgraph, clustering, adjac):
     # this gets all the triangles present in the Component
     all_triangles = nx.enumerate_all_cliques(subgraph)
     existing_triads = [x for x in all_triangles if len(x) == 3]
-    #adj = nx.to_numpy_array(subgraph, weight='score')
+    adjac = nx.to_numpy_array(subgraph, weight='score')
     pdf = pd.DataFrame(clustering)
     clusters = pdf.groupby([0]).groups.values()
+    con_v_incon = []
     for cluster in clusters:
         if len(cluster) < 3:
             continue
-        tris = []
+        tris_incon = []
+        tris_con = []
+        inconsistent = 0
+        consistent = 0
         for comb in itertools.combinations(cluster, 3):
+            # consistent if all are not zero or if 1 is not zero or if all zero
+            # inconsistent if 2 are not zero
+            non_zero = 0
             e1 = adjac[comb[0], comb[1]]
+            if e1 > 0:
+                non_zero += 1
             e2 = adjac[comb[0], comb[2]]
+            if e2 > 0:
+                non_zero += 1
             e3 = adjac[comb[1], comb[2]]
-            tris.append(comb)
+            if e3 > 0:
+                non_zero += 1
+            if non_zero != 3:
+                inconsistent += 1
+                tris_incon.append(comb)
+            else:
+                consistent += 1
+                tris_con.append(comb)
+        con_v_incon.append(consistent/(consistent+inconsistent))
+    #print(con_v_incon)
     return
 
 
@@ -187,7 +209,7 @@ def get_cluster_stats(subgraph) -> dict:
     Returns:
         A dictionary with the stats in it
     """
-    #return {}
+    # return {}
     clustcoefficient = nx.average_clustering(subgraph)
     trans = nx.transitivity(subgraph)
     # ecc = nx.eccentricity(subgraph)
