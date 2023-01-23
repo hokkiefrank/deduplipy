@@ -105,7 +105,7 @@ def evaluate_(ground_truth_cluster, all_data, found_clusters, node_amount=10, co
     print(f"Total weighted precision: {total_precision}, Total weighted recall: {total_recall}\nF1: {f_measure}")
 
 
-dataset = 'musicbrainz20k'
+dataset = 'stoxx50'
 learning = False
 pairs = None
 pairs_name = None
@@ -159,8 +159,8 @@ elif dataset == 'stoxx50':
     else:
         with open('stoxx50.pkl', 'rb') as f:
             myDedupliPy = pickle.load(f)
-    # pairs_name = "scored_pairs_table_stoxx50.csv"
-    # pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
+    pairs_name = "scored_pairs_table_stoxx50.csv"
+    pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
     # myDedupliPy.save_intermediate_steps = True
 elif dataset == 'voters':
     df = load_data(kind='voters5m')
@@ -185,12 +185,14 @@ markov_col = 'deduplication_id_' + markov_clustering.__name__
 hierar_col = 'deduplication_id_' + hierarchical_clustering.__name__
 connected_col = 'deduplication_id_' + connected_components.__name__
 myDedupliPy.verbose = True
-score_thresh = 0.35
+score_thresh = 0.1
+feature_count = 15
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
 cluster_algo_names = [name.__name__ for name in cluster_algos]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
         markov_clustering.__name__: {'inflation': 2}, 'use_cc': True,
-        'score_threshold': score_thresh}
+        'score_threshold': score_thresh,
+        'feature_count': feature_count}
 res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh, args=args)
 
 sorted_actual = res.sort_values(groupby_name)
@@ -265,10 +267,12 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
 eval_prios = {'f1': 1, 'bmd': 2, 'variation_of_information': 3, 'recall': 4, 'precision': 5}
 for g in r0:
     rows = res.loc[g]
-    if len(rows) < 2:
-        r3.append(list(rows.groupby([hierar_col]).groups.values())[0])
-        continue
     connectid = rows[connected_col].iloc[0]
+    if len(rows) < 2:
+        connectids.append(connectid)
+        r3.append(list(rows.groupby([hierar_col]).groups.values())[0])
+        r4.append(list(rows.groupby([hierar_col]).groups.values())[0])
+        continue
 
     gt = list(rows.groupby([groupby_name]).groups.values())
     hgroup = list(rows.groupby([hierar_col]).groups.values())
@@ -316,68 +320,6 @@ for g in r0:
             r3.append(gs)
         #continue
         labels.append(3)
-
-
-    #if mresult > hresult:
-    #    # print("MARKOV WINS")
-    #    # if connectid in stat:
-    #    #    print(stat[connectid], "\n")
-    #    markovwins.append(stat[connectid])
-    #    for gs in mgroup:
-    #        r3.append(gs)
-    #    labels.append(1)
-#
-    #elif hresult > mresult:
-    #    # print("Hierarchical wins-------------")
-    #    # if connectid in stat:
-    #    #    print(stat[connectid], "\n")
-    #    hierarchicalwins.append(stat[connectid])
-    #    for gs in hgroup:
-    #        r3.append(gs)
-    #    labels.append(2)
-#
-    #else:
-    #    if temp['hierarchical']['bmd'] < temp['markov']['bmd']:
-    #        # print("Hierarchical win in second round")
-    #        # if connectid in stat:
-    #        #    print(stat[connectid], "\n")
-    #        hierarchicalwins.append(stat[connectid])
-    #        for gs in hgroup:
-    #            r3.append(gs)
-    #        labels.append(2)
-    #    elif temp['markov']['bmd'] < temp['hierarchical']['bmd']:
-    #        # print("Markov win in second round")
-    #        # if connectid in stat:
-    #        #    print(stat[connectid], "\n")
-    #        markovwins.append(stat[connectid])
-    #        for gs in mgroup:
-    #            r3.append(gs)
-    #        labels.append(1)
-    #    else:
-    #        # print("Still a draw")
-    #        if temp['hierarchical']['variation_of_information'] < temp['markov']['variation_of_information']:
-    #            # print("Hierarchical win in third round")
-    #            # if connectid in stat:
-    #            #    print(stat[connectid], "\n")
-    #            hierarchicalwins.append(stat[connectid])
-    #            for gs in hgroup:
-    #                r3.append(gs)
-    #            labels.append(2)
-    #        elif temp['markov']['variation_of_information'] < temp['hierarchical']['variation_of_information']:
-    #            # print("Markov win in the second round")
-    #            # if connectid in stat:
-    #            #    print(stat[connectid], "\n")
-    #            markovwins.append(stat[connectid])
-    #            for gs in mgroup:
-    #                r3.append(gs)
-    #            labels.append(1)
-    #        else:
-    #            # print("Still a draw")
-    #            draws.append(stat[connectid])
-    #            for gs in mgroup:
-    #                r3.append(gs)
-    #            continue
-    #            labels.append(0)
 
     if connectid in stat:
         result_ = stat[connectid].values()
@@ -451,6 +393,8 @@ for (columnname, columndata) in markovwins.iteritems():
     for key in allwins.keys():
         if key == 'draw':
             continue
+        if columnname not in allwins[key]:
+            continue
         temp = pd.DataFrame(allwins[key][columnname]).rename(columns={columnname: columnname+f"_{key}"}).melt()
         temp_df = pd.concat([temp_df, temp])
     #temp_df['value'] = temp_df['value'].astype(float)
@@ -459,72 +403,72 @@ for (columnname, columndata) in markovwins.iteritems():
     #ax = temp_df.plot.hist(bins=20, alpha=0.5)
     plt.show()
 
-labels = np.array(labels)
-print(modelstats.shape, labels.shape)
-print(f"Amount of records per classlabel:{Counter(labels)}")
+#labels = np.array(labels)
+#print(modelstats.shape, labels.shape)
+#print(f"Amount of records per classlabel:{Counter(labels)}")
+#
+#modelstats = np.array(modelstatspy)
+#print(modelstats.shape, labels.shape)
+#
+#X_train, X_test, Y_train, Y_test = train_test_split(modelstats, labels, test_size=0.3, stratify=labels)
+#
+#skb = SelectKBest(chi2, k=feature_count)
+#new_modelstats = skb.fit_transform(X_train, Y_train)
+#supp = skb.get_support(indices=True)
+#print(supp)
+#
+#model = LogisticRegression()  # , multi_class='multinomial')
+#print(f"Amount of records per classlabel in the trainingset:{Counter(Y_train)}")
+#from imblearn.over_sampling import SMOTE
+#
+#sm = SMOTE(random_state=42)
+#X_res, y_res = sm.fit_resample(X_train, Y_train)
+#print(Counter(y_res))
+#model = model.fit(X_res, y_res)
+#
+#output2 = model.predict(X_test)
+#
+#acc_score = accuracy_score(Y_test, output2)
+#cfmatrix = confusion_matrix(Y_test, output2)
+#result['model'] = {}
+#result['model']['selected_features'] = supp.tolist()
+#result['model']['records_per_class'] = str(Counter(labels))
+#result['model']['accuracy_test_score'] = acc_score
+#result['model']['intercept'] = model.intercept_.tolist()
+#result['model']['coefficients'] = model.coef_.tolist()
+#result['model']['predicted_test_classes'] = str(Counter(output2))
+#result['model']['confusion_matrix'] = cfmatrix.tolist()
+#print(accuracy_score(Y_test, output2))
+#print(cfmatrix)
+#print(model.intercept_)
+#print(model.coef_)
+#print(model.classes_)
+#print(f"Amount of predicted records per classlabel:{Counter(output2)}")
+#
+#cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+#n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
+#print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
+#
+#
+#all_predictions = model.predict(modelstats)
+#acc_score = accuracy_score(labels, all_predictions)
+#for i in range(len(all_predictions)):
+#    label = all_predictions[i]
+#    conid = connectids[i]
+#    if label == 0:
+#        columnname = connected_col
+#    elif label == 1:
+#        columnname = markov_col
+#    elif label == 2:
+#        columnname = hierar_col
+#    elif label == 3:
+#        columnname = markov_col
+#
+#    clusters_ = list(res[res[connected_col] == conid].groupby([columnname]).groups.values())
+#    for gs in clusters_:
+#        r4.append(gs)
 
-modelstats = np.array(modelstatspy)
-print(modelstats.shape, labels.shape)
-
-X_train, X_test, Y_train, Y_test = train_test_split(modelstats, labels, test_size=0.3, stratify=labels)
-
-skb = SelectKBest(chi2, k=6)
-new_modelstats = skb.fit_transform(X_train, Y_train)
-supp = skb.get_support(indices=True)
-print(supp)
-
-model = LogisticRegression()  # , multi_class='multinomial')
-print(f"Amount of records per classlabel in the trainingset:{Counter(Y_train)}")
-from imblearn.over_sampling import SMOTE
-
-sm = SMOTE(random_state=42)
-X_res, y_res = sm.fit_resample(X_train, Y_train)
-print(Counter(y_res))
-model = model.fit(X_res, y_res)
-
-output2 = model.predict(X_test)
-
-acc_score = accuracy_score(Y_test, output2)
-cfmatrix = confusion_matrix(Y_test, output2)
-result['model'] = {}
-result['model']['selected_features'] = supp.tolist()
-result['model']['records_per_class'] = str(Counter(labels))
-result['model']['accuracy_test_score'] = acc_score
-result['model']['intercept'] = model.intercept_.tolist()
-result['model']['coefficients'] = model.coef_.tolist()
-result['model']['predicted_test_classes'] = str(Counter(output2))
-result['model']['confusion_matrix'] = cfmatrix.tolist()
-print(accuracy_score(Y_test, output2))
-print(cfmatrix)
-print(model.intercept_)
-print(model.coef_)
-print(model.classes_)
-print(f"Amount of predicted records per classlabel:{Counter(output2)}")
-
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
-print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
-
-
-all_predictions = model.predict(modelstats)
-acc_score = accuracy_score(labels, all_predictions)
-for i in range(len(all_predictions)):
-    label = all_predictions[i]
-    conid = connectids[i]
-    if label == 0:
-        columnname = connected_col
-    elif label == 1:
-        columnname = markov_col
-    elif label == 2:
-        columnname = hierar_col
-    elif label == 3:
-        columnname = markov_col
-
-    clusters_ = list(res[res[connected_col] == conid].groupby([columnname]).groups.values())
-    for gs in clusters_:
-        r4.append(gs)
-
-rs.append(("Predicted clustering", list(r4)))
+#rs.append(("Predicted clustering", list(r4)))
 for r in rs:
     print(f"Clustering method:{r[0]}")
     result[r[0]] = {}
@@ -532,6 +476,10 @@ for r in rs:
         result[r[0]][eva] = evaluate(r[1], s, eva)
         print(f"{eva}: {result[r[0]][eva]:.4f}")
     print("----------------------------\n")
+print("Markov own:")
+evaluate_(groundtruth, res, res.groupby([markov_col]).indices, amount, markov_col)
+print("Hierar own:")
+evaluate_(groundtruth, res, res.groupby([hierar_col]).indices, amount, hierar_col)
 
 with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as outfile:
     json.dump(result, outfile)
