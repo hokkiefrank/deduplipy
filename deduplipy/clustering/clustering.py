@@ -230,7 +230,6 @@ def get_cluster_stats(subgraph) -> dict:
     # Number of triangle
     ts = nx.triangles(subgraph)
     triangles = sum(ts.values()) / 3
-    # Connectivity
     # connectivity = nx.average_node_connectivity(subgraph)
     # Centralitiy
     centrality = nx.harmonic_centrality(subgraph, distance='score')

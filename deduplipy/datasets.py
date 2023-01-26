@@ -51,9 +51,15 @@ def load_voters_5m() -> pd.DataFrame:
 
     return df
 
+
+def load_affiliations():
+    file_path = resource_filename('deduplipy', os.path.join('data', 'affiliationstrings_ids.csv'))
+    df = (pd.read_csv(file_path))
+
+
 def load_data(kind: str = 'voters') -> pd.DataFrame:
     """
-    Load data for experimentation. `kind` can be 'stoxx50' or 'voters' or 'musicbrainz20k' or 'voters5m'.
+    Load data for experimentation. `kind` can be 'stoxx50', 'voters', 'musicbrainz20k', 'musicbrainz200k', 'affiliations' or 'voters5m'.
 
     Stoxx 50 data are created by the developer of DedupliPy. Voters data is based on the North Carolina voter registry
     and this dataset is provided by Prof. Erhard Rahm ('Comparative Evaluation of Distributed Clustering Schemes for
@@ -73,5 +79,7 @@ def load_data(kind: str = 'voters') -> pd.DataFrame:
         return load_musick(20)
     elif kind == 'musicbrainz200k':
         return load_musick(200)
+    elif kind == 'affiliations':
+        return load_affiliations()
     elif kind == 'voters5m':
         return load_voters_5m()
