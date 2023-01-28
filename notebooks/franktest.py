@@ -110,6 +110,7 @@ learning = False
 pairs = None
 pairs_name = None
 save_intermediate = False
+pickle_name = None
 
 if dataset == 'musicbrainz20k':
     df = load_data(kind='musicbrainz20k')
@@ -119,12 +120,13 @@ if dataset == 'musicbrainz20k':
     myDedupliPy = Deduplicator(['title', 'artist', 'album'])
     myDedupliPy.verbose = True
     #myDedupliPy.save_intermediate_steps = True
+    pickle_name = 'musicbrainz20kfulltest3.pkl'
     if learning:
         myDedupliPy.fit(df)
         with open('musicbrainz20kfulltest3.pkl', 'wb') as f:
             pickle.dump(myDedupliPy, f)
     else:
-        with open('musicbrainz20kfulltest3.pkl', 'rb') as f:
+        with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
     pairs_name = "scored_pairs_table_musicbrainz20k_full3.csv"
@@ -155,13 +157,13 @@ elif dataset == 'stoxx50':
     groundtruth = group.indices
     myDedupliPy = Deduplicator(['name'])
     myDedupliPy.verbose = True
-
+    pickle_name = 'stoxx50.pkl'
     if learning:
         myDedupliPy.fit(df)
         with open('stoxx50extrapyminhash.pkl', 'wb') as f:
             pickle.dump(myDedupliPy, f)
     else:
-        with open('stoxx50.pkl', 'rb') as f:
+        with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
     pairs_name = "scored_pairs_table_stoxx50.csv"
@@ -192,12 +194,16 @@ hierar_col = 'deduplication_id_' + hierarchical_clustering.__name__
 connected_col = 'deduplication_id_' + connected_components.__name__
 score_thresh = 0.35
 feature_count = 15
+train_test_split_number = 0.4
+random_state_number = 1
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
 cluster_algo_names = [name.__name__ for name in cluster_algos]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
         markov_clustering.__name__: {'inflation': 2}, 'use_cc': True,
         'score_threshold': score_thresh,
-        'feature_count': feature_count}
+        'feature_count': feature_count,
+        'train_test_split': train_test_split_number,
+        'random_state': random_state_number}
 res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh, args=args)
 
 sorted_actual = res.sort_values(groupby_name)
@@ -218,6 +224,7 @@ result['changes_description'] = input("Please give a short description as to wha
 result['config'] = args
 result['dataset'] = dataset
 result['scored_pairs_table'] = pairs_name
+result['pickle_object_used'] = pickle_name
 print("----------------------------")
 
 markovwins = []
@@ -425,18 +432,18 @@ modelstats = np.array(modelstatspy)
 print(modelstats.shape, labels.shape)
 
 indices = np.arange(len(modelstats))
-X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices, test_size=0.3, stratify=labels)
+X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices, test_size=train_test_split_number, stratify=labels, random_state=random_state_number)
 
 skb = SelectKBest(chi2, k=feature_count)
 new_modelstats = skb.fit_transform(X_train, Y_train)
 supp = skb.get_support(indices=True)
 print(supp)
 
-model = LogisticRegression()  # , multi_class='multinomial')
+model = LogisticRegression(random_state=random_state_number)  # , multi_class='multinomial')
 print(f"Amount of records per classlabel in the trainingset:{sorted(Counter(Y_train).items())}")
 from imblearn.over_sampling import SMOTE
 
-sm = SMOTE(random_state=42)
+sm = SMOTE(random_state=random_state_number)
 X_res, y_res = sm.fit_resample(X_train, Y_train)
 print(sorted(Counter(y_res).items()))
 model = model.fit(X_res, y_res)
@@ -460,7 +467,7 @@ print(model.coef_)
 print(model.classes_)
 print(f"Amount of predicted records per classlabel:{sorted(Counter(output2).items())}")
 
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=random_state_number)
 n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
 print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
 
