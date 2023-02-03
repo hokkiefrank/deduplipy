@@ -14,7 +14,7 @@ from entity_resolution_evaluation.evaluation import evaluate
 from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering, connected_components
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
-
+from deduplipy.blocking import first_letter
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.model_selection import RepeatedStratifiedKFold
@@ -117,19 +117,18 @@ if dataset == 'musicbrainz20k':
     groupby_name = 'CID'
     group = df.groupby([groupby_name])  # CID for musicbrainz
     groundtruth = group.indices
-    myDedupliPy = Deduplicator(['title', 'artist', 'album'])
+    myDedupliPy = Deduplicator(['title', 'artist', 'album'], rules={'album': [first_letter]})
     myDedupliPy.verbose = True
-    #myDedupliPy.save_intermediate_steps = True
-    pickle_name = 'musicbrainz20kfulltest3.pkl'
+    pickle_name = 'musicbrainz20kcustomblocking.pkl'
     if learning:
         myDedupliPy.fit(df)
-        with open('musicbrainz20kfulltest3.pkl', 'wb') as f:
+        with open(pickle_name, 'wb') as f:
             pickle.dump(myDedupliPy, f)
     else:
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    pairs_name = "scored_pairs_table_musicbrainz20k_full3.csv"
+    pairs_name = "scored_pairs_table_custom_blocking.csv"
     pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'musicbrainz200k':
@@ -195,7 +194,7 @@ connected_col = 'deduplication_id_' + connected_components.__name__
 score_thresh = 0.35
 feature_count = 15
 train_test_split_number = 0.4
-random_state_number = 1
+random_state_number = 5
 cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]
 cluster_algo_names = [name.__name__ for name in cluster_algos]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
@@ -516,7 +515,7 @@ for r in rs:
 print("ONLY ON THE TEST SPLIT AFTER THIS LINE -----------------------------------------\n")
 
 rf = []
-rf.append(("Predicted clustering", list(r4)))
+rf.append(("test_split_predicted_clustering", list(r4)))
 for key in sub.keys():
     rf.append(("test_split_" + key, list(sub[key])))
 for r in rf:
