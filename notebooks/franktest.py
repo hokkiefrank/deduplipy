@@ -217,7 +217,7 @@ r3 = []
 r4 = []
 s = list(group.groups.values())
 rs = [("Connected_Components", r0), ("Hierarchical", r1), ("Markov", r2)]
-evaluations = ['precision', 'recall', 'f1', 'bmd']
+evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
 result = {}
 result['changes_description'] = input("Please give a short description as to what this experiment entails")
 result['config'] = args
@@ -239,7 +239,6 @@ connectids = []
 modelstatspy = []
 labels = []
 counter = 0
-evaluations.append('variation_of_information')
 
 
 def get_cluster_column_name(clusteringalgorithm: type(abs)) -> str:
@@ -291,10 +290,10 @@ for g in r0:
 
     gt = list(rows.groupby([groupby_name]).groups.values())
     hgroup = list(rows.groupby([hierar_col]).groups.values())
-    hresult = evaluate(hgroup, gt, 'f1')
+    #hresult = evaluate(hgroup, gt, 'f1')
 
     mgroup = list(rows.groupby([markov_col]).groups.values())
-    mresult = evaluate(mgroup, gt, 'f1')
+    #mresult = evaluate(mgroup, gt, 'f1')
     temp = {'hierarchical': {}, 'markov': {}}
 
     cluster_groups = {}
