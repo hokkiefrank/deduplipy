@@ -135,8 +135,11 @@ args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missi
         'feature_count': feature_count,
         'train_test_split': train_test_split_number,
         'random_state': random_state_number}
-res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh,
-                                args=args)
+indices = np.arange(len(df))
+X_train, X_test = train_test_split(df, shuffle=True, test_size=train_test_split_number, random_state=random_state_number)
+pairs = None
+res, stat = myDedupliPy.predict(X_train, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh, args=args)
+res_test, stat_test = myDedupliPy.predict(X_test, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh, args=args)
 
 rs = {}
 label_dict = {}
