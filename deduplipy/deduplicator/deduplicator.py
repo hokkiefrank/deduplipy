@@ -165,7 +165,7 @@ class Deduplicator:
         X.loc[X[col_name].isnull(), col_name] = np.arange(max_cluster_id + 1, max_cluster_id + 1 + n_missing)
         return X
 
-    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None,
+    def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None, suffix="",
                 **args) -> pd.DataFrame:
         """
         Predict on new data using the trained deduplicator.
@@ -215,7 +215,7 @@ class Deduplicator:
         if self.verbose:
             print(f'Nr of filtered pairs: {len(scored_pairs_table)}')
         if self.save_intermediate_steps:
-            scored_pairs_table.to_csv('scored_pairs_table.csv', index=None, sep="|")
+            scored_pairs_table.to_csv(suffix + 'scored_pairs_table.csv', index=None, sep="|")
         for methods in clustering:
             if self.verbose:
                 print(f'Clustering started for cluster method:{methods.__name__}')

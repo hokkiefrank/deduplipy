@@ -7,6 +7,7 @@ import numpy as np
 import networkx as nx
 import itertools
 from scipy.cluster import hierarchy
+from sklearn.cluster import AffinityPropagation
 import markov_clustering as mc
 import scipy.spatial.distance as ssd
 
@@ -39,7 +40,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
         graph.add_edge(row[f'{ROW_ID}_1'], row[f'{ROW_ID}_2'], score=row['score'])
 
     components = nx.connected_components(graph)
-
+    smallest_cc = min(nx.connected_components(graph), key=len)
     stats = {}
     clustering = {}
     cluster_counter = 0
@@ -148,6 +149,15 @@ def connected_components(subgraph) -> np.ndarray:
     return clusters
 
 
+def center_clustering(subgraph):
+    edgelist = subgraph.edges
+
+
+def affinity_propagation(subgraph, random_state: int = 10):
+    adjacency = nx.to_numpy_array(subgraph, weight='score')
+    ap = AffinityPropagation(random_state=random_state).fit(adjacency)
+    clusters = ap.labels_
+    return clusters
 def get_consistency(subgraph, clustering, adjac):
     """
 
@@ -195,9 +205,6 @@ def get_consistency(subgraph, clustering, adjac):
     #print(con_v_incon)
     return
 
-
-def center_clustering(subgraph):
-    edgelist = subgraph.edges
 
 
 def get_cluster_stats(subgraph) -> dict:

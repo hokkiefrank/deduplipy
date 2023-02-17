@@ -159,8 +159,8 @@ print("----------------------------")
 allwins = {'draw': []}
 for names in cluster_algo_names:
     allwins[names] = []
-xfxf = list(stat)[0]
-modelstats = np.empty((len(stat), len(stat[xfxf])))
+#xfxf = list(stat)[0]
+#modelstats = np.empty((len(stat), len(stat[xfxf])))
 connectids = []
 modelstatspy = []
 labels = []
@@ -246,31 +246,18 @@ for g in rs[connected_components.__name__]:
         data_ = list(result_)
         modelstatspy.append(data_)
         # Convert list to an array
-        numpyArray = np.array(data_)
-        modelstats[counter] = numpyArray
+        #numpyArray = np.array(data_)
+        #modelstats[counter] = numpyArray
         connectids.append(connectid)
-        counter += 1
-    else:
-        d = {'clustcoefficient': 0, 'transitivity': 0,
-             'diameter': 0, 'radius': 0,
-             'nodecount': 1,
-             'edgecount': 0, 'maxedgeweight': 0,
-             'minedgeweight': 0, 'avgedgeweight': 0}
-        data_ = list(d.values())
-        modelstatspy.append(data_)
-        # Convert list to an array
-        numpyArray = np.array(data_)
-        modelstats[counter] = numpyArray
-        counter += 1
+        #counter += 1
+
 
 for keys in allwins.keys():
     allwins[keys] = pd.DataFrame(allwins[keys])
 
 labels = np.array(labels)
-print(modelstats.shape, labels.shape)
-print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
-
 modelstats = np.array(modelstatspy)
+print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
 print(modelstats.shape, labels.shape)
 
 indices = np.arange(len(modelstats))
