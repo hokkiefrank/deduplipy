@@ -1,6 +1,7 @@
 import operator
 import random
 from deduplipy.config import DEDUPLICATION_ID_NAME
+from entity_resolution_evaluation.evaluation import evaluate
 
 
 def get_cluster_column_name(clusteringalgorithm) -> str:
@@ -38,14 +39,18 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
     if len(winners) == len(algo_names):
         returnval = 'draw'
     else:
-        returnval = 'markov_clustering' if 'markov_clustering' in winners else random.choice(list(winners))
+        returnval = random.choice(list(winners))
+    returnval = random.choice(list(winners))
     return returnval
 
 
-def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities):
+def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None):
+    if evaluations is None:
+        evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     labels = []
     mixed_best = []
     cluster_groups_with_id = {'mixed_best': {}}
+    cluster_algo_names = [name.__name__ for name in cluster_algorithms]
     component_ids = []
     for cluster_algo in cluster_algorithms:
         algorith_name = cluster_algo.__name__
@@ -56,12 +61,8 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         rows = total_resulting_clusters.loc[g]
         connectid = rows[connected_col].iloc[0]
         component_ids.append(connectid)
-        # if there is only one row for this connected component then we don't have to pick a clustering and just use the connected component.
-        if len(rows) < 2:
-            mixed_best.append(list(rows.groupby([connected_col]).groups.values())[0])
-            continue
         # get the ground truth clusters for this connected component
-        gt = list(rows.groupby([groupby_name]).groups.values())
+        gt = list(rows.groupby([groundtruth_name]).groups.values())
         temp = {}
         cluster_groups = {}
 
@@ -74,6 +75,15 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
                 if eva not in temp:
                     temp[eva] = {}
                 temp[eva][algorith_name] = evaluate(cluster_groups[algorith_name], gt, eva)
+
+        # if there is only one row for this connected component then we don't have to pick a clustering and just use the connected component.
+        if len(rows) < 2:
+            resul = list(rows.groupby([connected_col]).groups.values())
+            for gs_ in resul:
+                mixed_best.append(gs_)
+            cluster_groups_with_id['mixed_best'][connectid] = resul
+            continue
+
         # get the algo winner and add the features of this connected component to the name of the winner
         algo_winner = select_winner(temp, eval_priorities, cluster_algorithms)
         # add the label of the winner to the labels array
@@ -87,3 +97,40 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         cluster_groups_with_id['mixed_best'][connectid] = cluster_groups[algo_winner]
 
     return cluster_groups_with_id, labels, mixed_best, component_ids
+
+
+def predictions_to_clusters(label_predictions, data_indices, connected_component_ids, total_clustering_result, labels_dictionary, _cluster_groups_with_id, cluster_algos, connected_col, groundtruth_name):
+    my_gt = []
+    sub = {}
+    sub['mixed_best'] = []
+    sub['predicted_clustering'] = []
+    for cluster_algo in cluster_algos:
+        algorith_name = cluster_algo.__name__
+        sub[algorith_name] = []
+    cluster_algo_names = [name.__name__ for name in cluster_algos]
+
+    for i in range(len(data_indices)):
+        conid = connected_component_ids[data_indices[i]]
+        if i < len(label_predictions):
+            label = label_predictions[i]
+            algo_name = [i for i in labels_dictionary if labels_dictionary[i] == label][0]
+            if algo_name == 'draw':
+                algo_name = cluster_algo_names[0]
+            columnname = get_cluster_column_name(algo_name)
+            clusters_ = list(total_clustering_result[total_clustering_result[connected_col] == conid].groupby([columnname]).groups.values())
+            for gs in clusters_:
+                sub['predicted_clustering'].append(gs)
+        else:
+            clusters_ = list(total_clustering_result[total_clustering_result[connected_col] == conid].groupby([connected_col]).groups.values())
+            for gs in clusters_:
+                sub['predicted_clustering'].append(gs)
+        gt_clusters = list(total_clustering_result[total_clustering_result[connected_col] == conid].groupby([groundtruth_name]).groups.values())
+        for gt_ in gt_clusters:
+            my_gt.append(gt_)
+        for key in sub.keys():
+            if key not in _cluster_groups_with_id:
+                continue
+            for x in _cluster_groups_with_id[key][conid]:
+                sub[key].append(x)
+    # sub is a dictionary with as key the algorithm name and value the list of clusterings
+    return sub, my_gt

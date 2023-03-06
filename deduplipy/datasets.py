@@ -43,6 +43,7 @@ def load_voters_5m() -> pd.DataFrame:
         df_temp['surname'] = df_temp['surname'].astype('U').values
         df_temp['suburb'] = df_temp['suburb'].astype('U').values
         df_temp['postcode'] = df_temp['postcode'].astype('U').values
+        df_temp['recid'] = df_temp['recid'].astype('U').values
 
         if df is None:
             df = df_temp
@@ -57,7 +58,13 @@ def load_affiliations():
     df = (pd.read_csv(file_path))
 
 
-def load_data(kind: str = 'voters') -> pd.DataFrame:
+def load_music_single(count):
+    df = load_musick(count)
+    df['value'] = df[['title', 'artist', 'album']].agg(" ".join, axis=1)
+    df = df[['CID', 'value']]
+    return df
+
+def load_data(kind: str = 'voters', count:int =20) -> pd.DataFrame:
     """
     Load data for experimentation. `kind` can be 'stoxx50', 'voters', 'musicbrainz20k', 'musicbrainz200k', 'affiliations' or 'voters5m'.
 
@@ -81,5 +88,7 @@ def load_data(kind: str = 'voters') -> pd.DataFrame:
         return load_musick(200)
     elif kind == 'affiliations':
         return load_affiliations()
+    elif kind == 'musicbrainz20k_single':
+        return load_music_single(count)
     elif kind == 'voters5m':
         return load_voters_5m()

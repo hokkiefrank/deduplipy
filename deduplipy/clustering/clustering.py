@@ -7,7 +7,7 @@ import numpy as np
 import networkx as nx
 import itertools
 from scipy.cluster import hierarchy
-from sklearn.cluster import AffinityPropagation
+from sklearn.cluster import AffinityPropagation, OPTICS
 import markov_clustering as mc
 import scipy.spatial.distance as ssd
 
@@ -44,7 +44,7 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
     stats = {}
     clustering = {}
     cluster_counter = 0
-    if (use_cc and clustering_algorithm.__name__ != 'markov_clustering') or clustering_algorithm.__name__ == 'connected_components':
+    if use_cc or clustering_algorithm.__name__ == 'connected_components':
         print(f"There are {nx.number_connected_components(graph)} components")
         for component in components:
             subgraph = graph.subgraph(component)
@@ -157,6 +157,16 @@ def affinity_propagation(subgraph, random_state: int = 10):
     adjacency = nx.to_numpy_array(subgraph, weight='score')
     ap = AffinityPropagation(random_state=random_state).fit(adjacency)
     clusters = ap.labels_
+    return clusters
+
+def optics(subgraph, min_samples: int = 5):
+    if len(subgraph.nodes) > 1:
+        adjacency = nx.to_numpy_array(subgraph, weight='score')
+        opt = OPTICS(min_samples=min_samples).fit(adjacency)
+        clusters = opt.labels_
+    else:
+        clusters = np.array([1])
+
     return clusters
 def get_consistency(subgraph, clustering, adjac):
     """

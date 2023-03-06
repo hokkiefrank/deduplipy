@@ -104,7 +104,7 @@ class Deduplicator:
 
         """
         n_samples_minhash = n_samples // 2
-        minhash_pairs = MinHashSampler(self.col_names).sample(X, n_samples_minhash)
+        minhash_pairs = MinHashSampler(self.col_names, n_hash_tables=3).sample(X, n_samples_minhash)
         # the number of minhash samples can be (much) smaller than n_samples//2, in such case take more random pairs:
         n_samples_naive = n_samples - len(minhash_pairs)
         naive_pairs = NaiveSampler(self.col_names).sample(X, n_samples_naive)

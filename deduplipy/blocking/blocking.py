@@ -1,3 +1,6 @@
+import timeit
+from itertools import combinations
+from time import perf_counter
 from typing import List, Union, Dict
 
 import numpy as np
@@ -100,6 +103,58 @@ class Blocking(BaseEstimator):
         df_melted.dropna(inplace=True)
         return df_melted
 
+    def _itertools_blocking_table(self, X_fingerprinted):
+        groups = dict(tuple(X_fingerprinted.groupby('fingerprint')))
+        pairs_tables2 = []
+        #s = X_fingerprinted.set_index(ROW_ID).squeeze()
+        #combos = pd.DataFrame([c for c in combinations(s.index, 2)], columns=[f'{ROW_ID}_1', f'{ROW_ID}_2'])
+        #combos['fingerprint'] = s['fingerprint'][combos[f'{ROW_ID}_1']].values
+        #for col in self.col_names:
+        #    combos[f'{col}_1'] = s[col][combos[f'{ROW_ID}_1']].values
+        #    combos[f'{col}_2'] = s[col][combos[f'{ROW_ID}_2']].values
+        for i, df in groups.items():
+            length = len(df)
+            if length > 1000:
+                print(length)
+            if length == 1:
+                continue
+            s = df.set_index(ROW_ID).squeeze()
+            combos = pd.DataFrame([c for c in combinations(s.index, 2)], columns=[f'{ROW_ID}_1', f'{ROW_ID}_2'])
+            combos['fingerprint'] = i
+            for col in self.col_names:
+                combos[f'{col}_1'] = s[col][combos[f'{ROW_ID}_1']].values
+                combos[f'{col}_2'] = s[col][combos[f'{ROW_ID}_2']].values
+            pairs_tables2.append(combos)
+
+        return pd.concat(pairs_tables2)
+
+    def _join_blocking_table(self, X_fingerprinted):
+        pairs_table = X_fingerprinted.join(X_fingerprinted.drop('fingerprint', 1), on='fingerprint', lsuffix="_1", rsuffix="_2")
+        #pairs_table = pd.merge(X_fingerprinted[[self.col_names, 'fingerprint', ROW_ID]], X_fingerprinted, left_index=True, right_on='fingerprint', suffixes=('_1', '_2')).sort_index()
+        return pairs_table
+    def _groupby_blocking_table(self, X_fingerprinted):
+        pairs_tables = []
+        groups = dict(tuple(X_fingerprinted.groupby('fingerprint')))
+        total_len = 0
+        for i, df in groups.items():
+            length = len(df)
+            if length > 1000:
+                print(length)
+            group = df.merge(df, on='fingerprint', suffixes=('_1', '_2'))
+            group = group[group[f'{ROW_ID}_1'] < group[f'{ROW_ID}_2']]
+            group = group.drop_duplicates(subset=[f'{ROW_ID}_1', f'{ROW_ID}_2'])
+            if not group.empty:
+                pairs_tables.append(group)
+            total_len += len(group)
+        pairs_table = pd.concat(pairs_tables)
+
+        return pairs_table
+
+    def _original_create_pairs_table(self, X_fingerprinted):
+        pairs_table = X_fingerprinted.merge(X_fingerprinted, on='fingerprint', suffixes=('_1', '_2'))
+        pairs_table = pairs_table[pairs_table[f'{ROW_ID}_1'] < pairs_table[f'{ROW_ID}_2']]
+        return pairs_table
+
     def _create_pairs_table(self, X_fingerprinted: pd.DataFrame) -> pd.DataFrame:
         """
         Creates a pairs table based on the result of fingerprinting
@@ -110,9 +165,21 @@ class Blocking(BaseEstimator):
         Returns:
             pairs table
         """
-        pairs_table = X_fingerprinted.merge(X_fingerprinted, on='fingerprint', suffixes=('_1', '_2'))
         self.pairs_col_names = [f'{x}_1' for x in self.col_names] + [f'{x}_2' for x in self.col_names]
-        pairs_table = pairs_table[pairs_table[f'{ROW_ID}_1'] < pairs_table[f'{ROW_ID}_2']]
+        #b_start = perf_counter()
+        #pairs_table_groupby = self._groupby_blocking_table(X_fingerprinted)
+        #b_stop = perf_counter()
+        #print(f'groupby took:{b_stop - b_start:.4f} seconds')
+        #pairs_table_join = self._join_blocking_table(X_fingerprinted)
+        #c_start = perf_counter()
+        #pairs_talbe_itertools = self._itertools_blocking_table(X_fingerprinted)
+        #c_stop = perf_counter()
+        #print(f'itertools took:{c_stop - c_start:.4f} seconds')
+        d_start = perf_counter()
+        pairs_table = self._original_create_pairs_table(X_fingerprinted)
+        d_stop = perf_counter()
+        print(f'original took:{d_stop - d_start:.4f} seconds')
+        #self.pairs_col_names = [f'{x}_1' for x in self.col_names] + [f'{x}_2' for x in self.col_names]
         return pairs_table
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:

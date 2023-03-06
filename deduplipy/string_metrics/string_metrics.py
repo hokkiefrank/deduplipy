@@ -1,7 +1,7 @@
 import numpy as np
 
 from thefuzz.fuzz import ratio, token_sort_ratio, token_set_ratio, partial_ratio
-
+from strsimpy.qgram import QGram
 
 def length_adjustment(x_1: str, x_2: str) -> float:
     """
@@ -17,6 +17,13 @@ def length_adjustment(x_1: str, x_2: str) -> float:
     """
     shortest_length = min(len(x_1), len(x_2))
     return 1 - np.exp(-0.2 * shortest_length)
+
+
+def three_gram(x_1: str, x_2: str) -> float:
+    """
+    """
+    qgram3 = QGram(3)
+    return length_adjustment(x_1, x_2) * qgram3.distance(x_1, x_2)
 
 
 def adjusted_ratio(x_1: str, x_2: str) -> float:
@@ -75,3 +82,5 @@ def adjusted_partial_ratio(x_1: str, x_2: str) -> float:
         adjusted `partial_ratio` metric
     """
     return length_adjustment(x_1, x_2) * partial_ratio(x_1, x_2)
+
+

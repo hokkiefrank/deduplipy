@@ -1,3 +1,4 @@
+import random
 from typing import List, Tuple
 
 import numpy as np
@@ -42,8 +43,11 @@ class MinHashSampler(Sampler):
 
         """
         df = X.copy()
+        colls = list(df.columns)
+        res = list(set(colls) - set(self.col_names))
         df['row_number'] = np.arange(len(df))
-
+        if len(df) > 50000:
+            df = df.sample(n=20000)
         minhash_pairs = pd.DataFrame()
         for col in self.col_names:
             minhash_result = self.MinHasher.fit_predict(df, col)

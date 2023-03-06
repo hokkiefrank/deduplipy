@@ -42,15 +42,15 @@ def last_two_words(x):
 
 
 def first_letter(x):
-    x_trimmed = x.strip()
+    x_trimmed = x.strip().lower()
     if len(x_trimmed):
         return x_trimmed[:1]
     else:
         return None
 
 
-def first_three_letters(x):
-    x_trimmed = x.strip()
+def first_three_letters(x: str):
+    x_trimmed = x.strip().lower()
     if len(x_trimmed):
         return x_trimmed[:3]
     else:
