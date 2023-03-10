@@ -9,7 +9,8 @@ import pandas as pd
 from deduplipy.analyzing.cluster_method_prediction import get_cluster_column_name, get_mixed_best, \
     predictions_to_clusters
 from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering, connected_components, optics, \
-    affinity_propagation
+    affinity_propagation, louvain, leiden, walktrap, girvan_newman, leading_eigenvector, label_propagation, paris, \
+    greedy_modularity
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
 from deduplipy.blocking import first_letter, first_three_letters, first_four_letters_no_space
@@ -42,10 +43,10 @@ if dataset == 'musicbrainz20k':
     groupby_name = 'CID'
     group = df.groupby([groupby_name])  # CID for musicbrainz
     groundtruth = group.indices
-    #field_info = {'title': [three_gram]}
-    myDedupliPy = Deduplicator(['title', 'artist', 'album'], rules={'album': [first_letter]})#, field_info=field_info)
+    field_info = {'title': [three_gram]}
+    myDedupliPy = Deduplicator(['title', 'artist', 'album'], rules={'album': [first_letter]}, field_info=field_info)
     myDedupliPy.verbose = True
-    pickle_name = 'musicbrainz20kcustomblocking.pkl'
+    pickle_name = 'musicbrainz20kcustomblocking_customsimfunction.pkl'
     if learning:
         myDedupliPy.fit(df)
         with open(pickle_name, 'wb') as f:
@@ -55,7 +56,7 @@ if dataset == 'musicbrainz20k':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    pairs_name = "scored_pairs_table_custom_blocking.csv"
+    pairs_name = "scored_pairs_table_musicbrainz20kcustomblocking_customsimfunction.csv"
     pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'musicbrainz200k':
@@ -77,16 +78,17 @@ elif dataset == 'musicbrainz200k':
     # pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'musicbrainz20k_single':
-    dataset_count = 200
+    dataset_count = 20
     df = load_data(kind='musicbrainz20k_single', count=dataset_count)
     dataset = f'{dataset}_{dataset_count}'
     groupby_name = 'CID'
     group = df.groupby([groupby_name])  # CID for musicbrainz
     groundtruth = group.indices
-    myDedupliPy = Deduplicator(['value'], rules={'value': [first_three_letters]})
+    myDedupliPy = Deduplicator(['value'], rules={'value': [first_letter]})
     myDedupliPy.verbose = True
-    pickle_name = 'musicbrainz20kcustomblocking_single_three_letter.pkl'
+    pickle_name = 'musicbrainz20kcustomblocking_single_first_letter.pkl'
     if learning:
+        myDedupliPy.save_intermediate_steps = save_intermediate
         myDedupliPy.fit(df)
         with open(pickle_name, 'wb') as f:
             pickle.dump(myDedupliPy, f)
@@ -94,8 +96,8 @@ elif dataset == 'musicbrainz20k_single':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    #pairs_name = "scored_pairs_table_custom_blocking.csv"
-    #pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
+    pairs_name = "scored_pairs_table_musicbrainz20k_single_oneletterblocking.csv"
+    pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'stoxx50':
     df = load_data(kind='stoxx50')
@@ -142,16 +144,18 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_thresh = 0.4
+score_thresh = 0.3
 feature_count = 15
 train_test_split_number = 0.3
-random_state_number = 1000
-cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, affinity_propagation]
+random_state_number = 100
+np.random.seed(random_state_number)
+cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, greedy_modularity]
 cluster_algo_names = [name.__name__ for name in cluster_algos]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
         markov_clustering.__name__: {'inflation': 2},
         affinity_propagation.__name__: {'random_state': random_state_number},
         optics.__name__: {'min_samples': 2},
+        #girvan_newman.__name__:{'level': 3},
         'use_cc': True,
         'score_threshold': score_thresh,
         'feature_count': feature_count,
@@ -181,8 +185,8 @@ evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
 print("----------------------------")
 
 
-eval_prios = {'f1': 1, 'bmd': 2, 'variation_of_information': 3, 'recall': 4, 'precision': 5}
-
+eval_prios = {'adjusted_rand_score': 1, 'normalized_mutual_info_score': 2, 'fowlkes_mallows_score': 3, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
+result['eval_prios'] = eval_prios
 groups_with_id, labels, mixed_best_array, connectids = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name)
 rs['mixed_best'] = mixed_best_array
 labels = np.array(labels)
@@ -202,7 +206,7 @@ indices = np.arange(len(modelstats))
 ### this way we evaluate on the total clustering but only predict on components of size > 1.
 X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices,
                                                                                  test_size=train_test_split_number,
-                                                                                 stratify=labels,
+                                                                                 #stratify=labels,
                                                                                  random_state=random_state_number)
 singleton_CC = res[connected_col].value_counts()
 singleton_CC = singleton_CC[singleton_CC == 1].index
@@ -217,14 +221,14 @@ new_modelstats = skb.fit_transform(X_train, Y_train)
 supp = skb.get_support(indices=True)
 print(supp)
 
-model = LogisticRegression(random_state=random_state_number)  # , multi_class='multinomial')
+model = LogisticRegression(random_state=random_state_number, class_weight='balanced')  # , multi_class='multinomial')
 print(f"Amount of records per classlabel in the trainingset:{sorted(Counter(Y_train).items())}")
-from imblearn.over_sampling import SMOTE
-
-sm = SMOTE(random_state=random_state_number)
-X_res, y_res = sm.fit_resample(X_train, Y_train)
-print(sorted(Counter(y_res).items()))
-model = model.fit(X_res, y_res)
+#from imblearn.over_sampling import SMOTE
+#
+#sm = SMOTE(random_state=random_state_number)
+#X_res, y_res = sm.fit_resample(X_train, Y_train)
+#print(sorted(Counter(y_res).items()))
+model = model.fit(X_train, Y_train)
 
 output2 = model.predict(X_test)
 

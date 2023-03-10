@@ -8,6 +8,8 @@ import networkx as nx
 import itertools
 from scipy.cluster import hierarchy
 from sklearn.cluster import AffinityPropagation, OPTICS
+from cdlib import algorithms
+
 import markov_clustering as mc
 import scipy.spatial.distance as ssd
 
@@ -159,6 +161,7 @@ def affinity_propagation(subgraph, random_state: int = 10):
     clusters = ap.labels_
     return clusters
 
+
 def optics(subgraph, min_samples: int = 5):
     if len(subgraph.nodes) > 1:
         adjacency = nx.to_numpy_array(subgraph, weight='score')
@@ -168,6 +171,108 @@ def optics(subgraph, min_samples: int = 5):
         clusters = np.array([1])
 
     return clusters
+
+
+def cdl_communities_to_clusters(communities, subgraph):
+    clust_ind = 1
+    lv_clusters_formatted = [0] * len(subgraph.nodes)
+    nodes = list(subgraph.nodes)
+    for clust in communities:
+        for val in clust:
+            lv_clusters_formatted[nodes.index(val)] = clust_ind
+        clust_ind += 1
+    clusters = numpy.array(lv_clusters_formatted)
+    return clusters
+
+
+def louvain(subgraph, weight='score', resolution: int = 1., randomize=False):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.louvain(subgraph, weight=weight, resolution=resolution,
+                                         randomize=randomize).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def leiden(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.leiden(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def walktrap(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.walktrap(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def girvan_newman(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = list(nx.algorithms.community.girvan_newman(subgraph))
+        #communities = algorithms.girvan_newman(subgraph, level=level).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def leading_eigenvector(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.eigenvector(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def label_propagation(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.label_propagation(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def greedy_modularity(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.greedy_modularity(subgraph, weight="score").communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def paris(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.paris(subgraph).communities
+        #clusters = cdl_communities_to_clusters(communities, subgraph)
+        clust_ind = 1
+        clusters_formatted = [0] * len(subgraph.nodes)
+        for clust in communities:
+            for val in clust:
+                clusters_formatted[val] = clust_ind
+            clust_ind += 1
+        clusters = numpy.array(clusters_formatted)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
 def get_consistency(subgraph, clustering, adjac):
     """
 
@@ -211,10 +316,9 @@ def get_consistency(subgraph, clustering, adjac):
             else:
                 consistent += 1
                 tris_con.append(comb)
-        con_v_incon.append(consistent/(consistent+inconsistent))
-    #print(con_v_incon)
+        con_v_incon.append(consistent / (consistent + inconsistent))
+    # print(con_v_incon)
     return
-
 
 
 def get_cluster_stats(subgraph) -> dict:
@@ -257,7 +361,7 @@ def get_cluster_stats(subgraph) -> dict:
             'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
             'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight,
             'density': density, 'maxdegree': maxdegree, 'mindegree': mindegree,
-            'avgdegree': avgdegree, 'triangles': triangles, #  'connectivity': connectivity,
+            'avgdegree': avgdegree, 'triangles': triangles,  # 'connectivity': connectivity,
             'centrality': avgcentral}
 
     return stat

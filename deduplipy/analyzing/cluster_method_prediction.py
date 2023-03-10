@@ -1,5 +1,13 @@
 import operator
 import random
+import numpy as np
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import normalized_mutual_info_score
+from sklearn.metrics import fowlkes_mallows_score
+from sklearn.metrics import homogeneity_completeness_v_measure
+
+from deduplipy.clustering import cdl_communities_to_clusters
 from deduplipy.config import DEDUPLICATION_ID_NAME
 from entity_resolution_evaluation.evaluation import evaluate
 
@@ -13,7 +21,7 @@ def get_cluster_column_name(clusteringalgorithm) -> str:
         pass
 
 
-def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importance: dict, algo_names: list) -> str:
+def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importance: dict, algo_names: list, random_state_per_component: int) -> str:
     evaluation_metrics_importance = dict(sorted(evaluation_metrics_importance.items(), key=operator.itemgetter(1)))
     algo_names = [name.__name__ for name in algo_names]
     losers = []
@@ -27,26 +35,48 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
         win = func(evaluation_metrics_results[metricName], key=evaluation_metrics_results[metricName].get)
         max_value = func(evaluation_metrics_results[metricName].values())
         winners = {key for key, value in evaluation_metrics_results[metricName].items() if value == max_value}
+        winners = sorted(winners)
         if len(winners) == 1:
             # we have a clear winner on a metric, therefor we return this winner
             return win
         elif len(winners) != len(evaluation_metrics_results[metricName]):
             # we didn't have a winner, but we do have a loser somewhere, so remove the loser from the list to check.
             for clust_name in algo_names:
-                if clust_name not in winners:
+                if clust_name not in winners and clust_name not in losers:
                     losers.append(clust_name)
 
-    if len(winners) == len(algo_names):
-        returnval = 'draw'
-    else:
-        returnval = random.choice(list(winners))
-    returnval = random.choice(list(winners))
+    #if len(winners) == len(algo_names):
+    #    returnval = 'draw'
+    #else:
+    #    r = np.random.RandomState(random_state_per_component)
+    #    returnval = r.choice(list(winners))
+    r = np.random.RandomState(random_state_per_component)
+    returnval = r.choice(list(winners))
+    #if random_state_per_component < 100:
+    #    print(f"random state (cc id): {random_state_per_component}\nWinners: {winners}\nChosen winner: {returnval}\n")
     return returnval
 
 
-def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None):
+def perform_scoring(score, param, gt):
+
+    if score == 'silhouette_score':
+        pass
+    elif score == 'adjusted_rand_score':
+        return adjusted_rand_score(gt, param)
+    elif score == 'normalized_mutual_info_score':
+        return normalized_mutual_info_score(gt, param)
+    elif score == 'fowlkes_mallows_score':
+        return fowlkes_mallows_score(gt, param)
+    elif score == 'homogeneity_completeness_v_measure':
+        return homogeneity_completeness_v_measure(gt, param)
+    else:
+        pass
+
+def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None):
     if evaluations is None:
         evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
+    if scoring is None:
+        scoring = ['adjusted_rand_score','normalized_mutual_info_score','fowlkes_mallows_score']
     labels = []
     mixed_best = []
     cluster_groups_with_id = {'mixed_best': {}}
@@ -75,7 +105,13 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
                 if eva not in temp:
                     temp[eva] = {}
                 temp[eva][algorith_name] = evaluate(cluster_groups[algorith_name], gt, eva)
-
+            if scoring is not None:
+                for score in scoring:
+                    if score not in temp:
+                        temp[score] = {}
+                    true_labels = rows[groundtruth_name].values
+                    pred_labels = rows[get_cluster_column_name(algorith_name)].values
+                    temp[score][algorith_name] = perform_scoring(score, pred_labels, true_labels)
         # if there is only one row for this connected component then we don't have to pick a clustering and just use the connected component.
         if len(rows) < 2:
             resul = list(rows.groupby([connected_col]).groups.values())
@@ -85,7 +121,8 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             continue
 
         # get the algo winner and add the features of this connected component to the name of the winner
-        algo_winner = select_winner(temp, eval_priorities, cluster_algorithms)
+        #print(np.random.get_state())
+        algo_winner = select_winner(temp, eval_priorities, cluster_algorithms, connectid)
         # add the label of the winner to the labels array
         labels.append(label_diction[algo_winner])
 
