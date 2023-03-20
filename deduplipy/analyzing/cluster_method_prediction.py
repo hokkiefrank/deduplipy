@@ -5,10 +5,10 @@ from sklearn.cluster import AffinityPropagation, MeanShift, MiniBatchKMeans
 from scipy.sparse.csgraph import connected_components
 from deduplipy.analyzing.metrics_collection import perform_scoring
 from deduplipy.clustering.ensemble_clustering import ClusterSimilarityMatrix
-from deduplipy.config import DEDUPLICATION_ID_NAME
+from deduplipy.config import DEDUPLICATION_ID_NAME, MIN_PROBABILITY
 from entity_resolution_evaluation.evaluation import evaluate
 
-MIN_PROBABILITY = 0.75
+
 def get_cluster_column_name(clusteringalgorithm) -> str:
     if callable(clusteringalgorithm):
         return '_'.join([DEDUPLICATION_ID_NAME, clusteringalgorithm.__name__])

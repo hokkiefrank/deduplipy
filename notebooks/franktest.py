@@ -14,6 +14,7 @@ from deduplipy.deduplicator import Deduplicator
 from deduplipy.blocking import first_letter, first_three_letters, first_four_letters_no_space
 from deduplipy.evaluation.pairwise_evaluation import perform_evaluation
 from deduplipy.string_metrics import three_gram
+from deduplipy.config import MIN_PROBABILITY
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.model_selection import RepeatedStratifiedKFold
@@ -142,135 +143,140 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_thresh = 0.3
-feature_count = 15
-train_test_split_number = 0.4
-random_state_number = 1
-np.random.seed(random_state_number)
-cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, cdlib_ipca]
-cluster_algo_names = [name.__name__ for name in cluster_algos]
-args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
-        markov_clustering.__name__: {'inflation': 2},
-        affinity_propagation.__name__: {'random_state': random_state_number},
-        optics.__name__: {'min_samples': 2},
-        'use_cc': True,
-        'score_threshold': score_thresh,
-        'feature_count': feature_count,
-        'train_test_split': train_test_split_number,
-        'random_state': random_state_number}
-result = {'changes_description': input("Please give a short description as to what this experiment entails"),
-          'config': args, 'dataset': dataset, 'scored_pairs_table': pairs_name, 'pickle_object_used': pickle_name,
-          'split_version': 'features_split'}
+score_threshes = [0.3, 0.35, 0.4, 0.45]
+for score_thresh in score_threshes:
+    mes = f"Running with scorethreshold of: {score_thresh}"
+    feature_count = 15
+    train_test_split_number = 0.4
+    random_state_number = 1
+    np.random.seed(random_state_number)
+    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, greedy_modularity, louvain, affinity_propagation, optics, cdlib_scan, cdlib_pycombo, cdlib_der, cdlib_dcs, cdlib_ipca, cdlib_spinglass, walktrap]
+    cluster_algo_names = [name.__name__ for name in cluster_algos]
+    args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
+            markov_clustering.__name__: {'inflation': 2},
+            affinity_propagation.__name__: {'random_state': random_state_number},
+            optics.__name__: {'min_samples': 2},
+            'use_cc': True,
+            'score_threshold': score_thresh,
+            'feature_count': feature_count,
+            'train_test_split': train_test_split_number,
+            'random_state': random_state_number,
+            'ensemble_cut_probability': MIN_PROBABILITY}
+    if mes is None:
+        mes = input("Please give a short description as to what this experiment entails")
+    result = {'changes_description': mes,
+              'config': args, 'dataset': dataset, 'scored_pairs_table': pairs_name, 'pickle_object_used': pickle_name,
+              'split_version': 'features_split'}
 
-res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh,
-                                args=args)
+    res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh,
+                                    args=args)
 
-rs = {}
-label_dict = {}
-for i in range(len(cluster_algos)):
-    algo = cluster_algos[i]
-    col = get_cluster_column_name(algo)
-    rs[algo.__name__] = list(res.groupby([col]).groups.values())
-    label_dict[algo.__name__] = i
+    rs = {}
+    label_dict = {}
+    for i in range(len(cluster_algos)):
+        algo = cluster_algos[i]
+        col = get_cluster_column_name(algo)
+        rs[algo.__name__] = list(res.groupby([col]).groups.values())
+        label_dict[algo.__name__] = i
 
-label_dict['draw'] = len(label_dict)
-r4 = []
-s = list(group.groups.values())
-result['label_dict'] = label_dict
-rs['mixed_best'] = []
-evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
-print("----------------------------")
-
-
-eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
-result['eval_prios'] = eval_prios
-groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
-rs['mixed_best'] = mixed_best_array
-rs['ensemble_clustering'] = ensemble_clusterings
-labels = np.array(labels)
-print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
-modelstatspy = []
-for key, value in stat.items():
-    result_ = value.values()
-
-    # Convert object to a list
-    data_ = list(result_)
-    modelstatspy.append(data_)
-modelstats = np.array(modelstatspy)
-print(modelstats.shape, labels.shape)
-
-indices = np.arange(len(modelstats))
-### maybe split on all components with nodecount > 1 (to predict on) and split on all the components with size 1.
-### this way we evaluate on the total clustering but only predict on components of size > 1.
-X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices,
-                                                                                 test_size=train_test_split_number,
-                                                                                 #stratify=labels,
-                                                                                 random_state=random_state_number)
-singleton_CC = res[connected_col].value_counts()
-singleton_CC = singleton_CC[singleton_CC == 1].index
-CCindices_train, CCindices_test = train_test_split(singleton_CC, test_size=train_test_split_number,random_state=random_state_number)
-indices_to_append = []
-for val in CCindices_test:
-    indices_to_append.append(connectids.index(val))
-indices_test = np.concatenate((indices_test, np.array(indices_to_append)))
-
-skb = SelectKBest(chi2, k=feature_count)
-new_modelstats = skb.fit_transform(X_train, Y_train)
-supp = skb.get_support(indices=True)
-print(supp)
-
-model = LogisticRegression(random_state=random_state_number, class_weight='balanced')  # , multi_class='multinomial')
-print(f"Amount of records per classlabel in the trainingset:{sorted(Counter(Y_train).items())}")
-#from imblearn.over_sampling import SMOTE
-#
-#sm = SMOTE(random_state=random_state_number)
-#X_res, y_res = sm.fit_resample(X_train, Y_train)
-#print(sorted(Counter(y_res).items()))
-model = model.fit(X_train, Y_train)
-
-output2 = model.predict(X_test)
-
-acc_score = accuracy_score(Y_test, output2)
-cfmatrix = confusion_matrix(Y_test, output2)
-result['model'] = {}
-result['model']['selected_features'] = supp.tolist()
-result['model']['records_per_class'] = str(sorted(Counter(labels).items()))
-result['model']['accuracy_test_score'] = acc_score
-result['model']['intercept'] = model.intercept_.tolist()
-result['model']['coefficients'] = model.coef_.tolist()
-result['model']['predicted_test_classes'] = str(sorted(Counter(output2).items()))
-result['model']['confusion_matrix'] = cfmatrix.tolist()
-print(accuracy_score(Y_test, output2))
-print(cfmatrix)
-print(model.intercept_)
-print(model.coef_)
-print(model.classes_)
-print(f"Amount of predicted records per classlabel:{sorted(Counter(output2).items())}")
-
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=random_state_number)
-n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
-print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
-
-all_predictions = output2  # model.predict(X_test)
-acc_score = accuracy_score(Y_test, all_predictions)
+    label_dict['draw'] = len(label_dict)
+    r4 = []
+    s = list(group.groups.values())
+    result['label_dict'] = label_dict
+    rs['mixed_best'] = []
+    evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
+    print("----------------------------")
 
 
-# perform pairwise evaluation on the entire clustering
-result |= perform_evaluation(rs, s)
+    eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
+    result['eval_prios'] = eval_prios
+    groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
+    rs['mixed_best'] = mixed_best_array
+    rs['ensemble_clustering'] = ensemble_clusterings
+    labels = np.array(labels)
+    print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
+    modelstatspy = []
+    for key, value in stat.items():
+        result_ = value.values()
 
-#gt_ = list(res[res[connected_col].isin(connectids)].groupby([groupby_name]).groups.values())
+        # Convert object to a list
+        data_ = list(result_)
+        modelstatspy.append(data_)
+    modelstats = np.array(modelstatspy)
+    print(modelstats.shape, labels.shape)
 
-print("ONLY ON THE TEST SPLIT AFTER THIS LINE -----------------------------------------\n")
-sub, gt = predictions_to_clusters(all_predictions, indices_test, connectids, res, label_dict, groups_with_id, cluster_algos, connected_col, groupby_name)
-# convert the
-rf = {}
-for key in sub.keys():
-    rf["test_split_" + key] = sub[key]
+    indices = np.arange(len(modelstats))
+    ### maybe split on all components with nodecount > 1 (to predict on) and split on all the components with size 1.
+    ### this way we evaluate on the total clustering but only predict on components of size > 1.
+    X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices,
+                                                                                     test_size=train_test_split_number,
+                                                                                     #stratify=labels,
+                                                                                     random_state=random_state_number)
+    singleton_CC = res[connected_col].value_counts()
+    singleton_CC = singleton_CC[singleton_CC == 1].index
+    CCindices_train, CCindices_test = train_test_split(singleton_CC, test_size=train_test_split_number,random_state=random_state_number)
+    indices_to_append = []
+    for val in CCindices_test:
+        indices_to_append.append(connectids.index(val))
+    indices_test = np.concatenate((indices_test, np.array(indices_to_append)))
 
-# perform pairwise evaluation on the clusterings on the selected connected components by the test/train split
-result |= perform_evaluation(rf, gt)
+    skb = SelectKBest(chi2, k=feature_count)
+    new_modelstats = skb.fit_transform(X_train, Y_train)
+    supp = skb.get_support(indices=True)
+    print(supp)
 
-with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as outfile:
-    json.dump(result, outfile)
+    model = LogisticRegression(random_state=random_state_number, class_weight='balanced')  # , multi_class='multinomial')
+    print(f"Amount of records per classlabel in the trainingset:{sorted(Counter(Y_train).items())}")
+    #from imblearn.over_sampling import SMOTE
+    #
+    #sm = SMOTE(random_state=random_state_number)
+    #X_res, y_res = sm.fit_resample(X_train, Y_train)
+    #print(sorted(Counter(y_res).items()))
+    model = model.fit(X_train, Y_train)
 
-print("done")
+    output2 = model.predict(X_test)
+
+    acc_score = accuracy_score(Y_test, output2)
+    cfmatrix = confusion_matrix(Y_test, output2)
+    result['model'] = {}
+    result['model']['selected_features'] = supp.tolist()
+    result['model']['records_per_class'] = str(sorted(Counter(labels).items()))
+    result['model']['accuracy_test_score'] = acc_score
+    result['model']['intercept'] = model.intercept_.tolist()
+    result['model']['coefficients'] = model.coef_.tolist()
+    result['model']['predicted_test_classes'] = str(sorted(Counter(output2).items()))
+    result['model']['confusion_matrix'] = cfmatrix.tolist()
+    print(accuracy_score(Y_test, output2))
+    print(cfmatrix)
+    print(model.intercept_)
+    print(model.coef_)
+    print(model.classes_)
+    print(f"Amount of predicted records per classlabel:{sorted(Counter(output2).items())}")
+
+    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=random_state_number)
+    n_scores = cross_val_score(model, modelstats, labels, scoring='accuracy', cv=cv, n_jobs=-1)
+    print('Mean Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
+
+    all_predictions = output2  # model.predict(X_test)
+    acc_score = accuracy_score(Y_test, all_predictions)
+
+
+    # perform pairwise evaluation on the entire clustering
+    result |= perform_evaluation(rs, s)
+
+    #gt_ = list(res[res[connected_col].isin(connectids)].groupby([groupby_name]).groups.values())
+
+    print("ONLY ON THE TEST SPLIT AFTER THIS LINE -----------------------------------------\n")
+    sub, gt = predictions_to_clusters(all_predictions, indices_test, connectids, res, label_dict, groups_with_id, cluster_algos, connected_col, groupby_name)
+    # convert the
+    rf = {}
+    for key in sub.keys():
+        rf["test_split_" + key] = sub[key]
+
+    # perform pairwise evaluation on the clusterings on the selected connected components by the test/train split
+    result |= perform_evaluation(rf, gt)
+
+    with open(os.path.join('./testruns/' + str(int(time.time())) + '.json'), 'w') as outfile:
+        json.dump(result, outfile)
+
+    print("done")
