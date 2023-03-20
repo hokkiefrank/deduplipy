@@ -8,9 +8,7 @@ import numpy as np
 import pandas as pd
 from deduplipy.analyzing.cluster_method_prediction import get_cluster_column_name, get_mixed_best, \
     predictions_to_clusters
-from deduplipy.clustering.clustering import markov_clustering, hierarchical_clustering, connected_components, optics, \
-    affinity_propagation, louvain, leiden, walktrap, girvan_newman, leading_eigenvector, label_propagation, paris, \
-    greedy_modularity
+from deduplipy.clustering.clustering import *
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
 from deduplipy.blocking import first_letter, first_three_letters, first_four_letters_no_space
@@ -46,7 +44,7 @@ if dataset == 'musicbrainz20k':
     field_info = {'title': [three_gram]}
     myDedupliPy = Deduplicator(['title', 'artist', 'album'], rules={'album': [first_letter]}, field_info=field_info)
     myDedupliPy.verbose = True
-    pickle_name = 'musicbrainz20kcustomblocking_customsimfunction.pkl'
+    pickle_name = 'musicbrainz20kfulltest2.pkl'
     if learning:
         myDedupliPy.fit(df)
         with open(pickle_name, 'wb') as f:
@@ -56,7 +54,7 @@ if dataset == 'musicbrainz20k':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    pairs_name = "scored_pairs_table_musicbrainz20kcustomblocking_customsimfunction.csv"
+    pairs_name = "scored_pairs_table_musicbrainz20k_full.csv"
     pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'musicbrainz200k':
@@ -146,16 +144,15 @@ hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
 score_thresh = 0.3
 feature_count = 15
-train_test_split_number = 0.3
-random_state_number = 100
+train_test_split_number = 0.4
+random_state_number = 1
 np.random.seed(random_state_number)
-cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, greedy_modularity]
+cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, cdlib_ipca]
 cluster_algo_names = [name.__name__ for name in cluster_algos]
 args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
         markov_clustering.__name__: {'inflation': 2},
         affinity_propagation.__name__: {'random_state': random_state_number},
         optics.__name__: {'min_samples': 2},
-        #girvan_newman.__name__:{'level': 3},
         'use_cc': True,
         'score_threshold': score_thresh,
         'feature_count': feature_count,
@@ -185,10 +182,11 @@ evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
 print("----------------------------")
 
 
-eval_prios = {'adjusted_rand_score': 1, 'normalized_mutual_info_score': 2, 'fowlkes_mallows_score': 3, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
+eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
 result['eval_prios'] = eval_prios
-groups_with_id, labels, mixed_best_array, connectids = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name)
+groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
 rs['mixed_best'] = mixed_best_array
+rs['ensemble_clustering'] = ensemble_clusterings
 labels = np.array(labels)
 print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
 modelstatspy = []

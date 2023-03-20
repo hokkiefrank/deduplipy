@@ -7,12 +7,17 @@ import numpy as np
 import networkx as nx
 import itertools
 from scipy.cluster import hierarchy
-from sklearn.cluster import AffinityPropagation, OPTICS
+from scipy.optimize import curve_fit
+from sklearn.cluster import AffinityPropagation, OPTICS, MiniBatchKMeans, SpectralClustering
 from cdlib import algorithms
-
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
 import markov_clustering as mc
 import scipy.spatial.distance as ssd
-
+from scipy.sparse.csgraph import connected_components as actual_connected_components
+from deduplipy.clustering.ensemble_clustering import ClusterSimilarityMatrix
+from deduplipy.analyzing.metrics_collection import perform_scoring
 from deduplipy.config import DEDUPLICATION_ID_NAME, ROW_ID
 from deduplipy.clustering.fill_missing_edges import fill_missing_links
 
@@ -55,6 +60,11 @@ def basic_clustering_steps(scored_pairs_table: pd.DataFrame, col_names: List,
                 clusters = clustering_algorithm(subgraph, **args['args'][clustering_algorithm.__name__])
             else:
                 clusters = clustering_algorithm(subgraph)
+            #if len(np.unique(clusters)) > 1:
+            #    adj = nx.to_numpy_array(subgraph, weight='score')
+            #    silhouettescore = perform_scoring('silhouette_score', adj, clusters)
+            #else:
+            #    silhouettescore = 0
             clustering.update(dict(zip(subgraph.nodes(), clusters + cluster_counter)))
 
             if clustering_algorithm.__name__ == 'connected_components':
@@ -272,6 +282,182 @@ def paris(subgraph):
         clusters = np.array([1])
 
     return clusters
+
+
+def cdlib_ipca(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.ipca(subgraph, weights="score").communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_dcs(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.dcs(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_cpm(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.cpm(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_belief(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.belief(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_infomap(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.infomap(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_kcut(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.kcut(subgraph, kmax=4).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_der(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.der(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_pycombo(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.pycombo(subgraph, weight='score').communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_scan(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.scan(subgraph, epsilon=0.7, mu=3).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_spinglass(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.spinglass(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def cdlib_ga(subgraph):
+    if len(subgraph.nodes) > 1:
+        communities = algorithms.ga(subgraph).communities
+        clusters = cdl_communities_to_clusters(communities, subgraph)
+    else:
+        clusters = np.array([1])
+
+    return clusters
+
+
+def kmeans_with_elbow(subgraph):
+    # Generate some sample data
+
+    X = nx.to_numpy_array(subgraph, weight='score')
+    max_k = len(subgraph.nodes)
+    # Try clustering for different values of k
+    wcss = []
+    all_labels = []
+    for k in range(1, max_k):
+        kmeans = SpectralClustering(n_clusters=k, n_init=10, random_state=0)
+        kmeans.fit(X)
+        all_labels.append(kmeans.labels_)
+        wcss.append(kmeans.inertia_)
+
+    # Calculate the first derivative of the WCSS curve
+    dx = np.diff(wcss)
+    dy = np.diff(range(len(wcss)))
+    grad = np.array([dy[i] / dx[i] for i in range(len(dx))])
+
+    # Find the knee point using the find_peaks function from scipy.signal
+    peaks, _ = find_peaks(grad)
+    knee_point = None
+    if len(peaks) > 0:
+        knee_point = peaks[0] + 1
+
+    # Plot the WCSS as a function of k and highlight the knee point
+    plt.plot(range(1, max_k), wcss)
+    if knee_point:
+        plt.plot(knee_point, wcss[knee_point - 1], marker='o', color='red')
+    plt.title('Elbow Method')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('WCSS')
+    plt.show()
+
+    if knee_point:
+        print(f'The knee point is at k={knee_point}')
+    else:
+        knee_point = 1
+    return all_labels[knee_point - 1]
+
+
+def kmeans_with_ensemble(subgraph):
+    NUM_KMEANS = 32
+    MIN_PROBABILITY = 0.6
+    X = nx.to_numpy_array(subgraph, weight='score')
+    # Generating a "Cluster Forest"
+    clustering_models = NUM_KMEANS * [
+        # Note: Do not set a random_state, as the variability is crucial
+        # This is an extreme simple K-Means
+        MiniBatchKMeans(n_clusters=int((len(subgraph.nodes))/2), batch_size=64, n_init=1, max_iter=20)
+    ]
+
+    clt_sim_matrix = ClusterSimilarityMatrix()
+    for model in clustering_models:
+        clt_sim_matrix.fit(model.fit_predict(X=X))
+
+    sim_matrix = clt_sim_matrix.similarity
+    norm_sim_matrix = sim_matrix / sim_matrix.diagonal()
+
+    # Transforming the probabilities into graph edges
+    # This is very similar to DBSCAN
+    graph = (norm_sim_matrix > MIN_PROBABILITY).astype(int)
+    n_clusters, y_ensemble = actual_connected_components(graph, directed=False, return_labels=True)
+    return y_ensemble
 
 def get_consistency(subgraph, clustering, adjac):
     """

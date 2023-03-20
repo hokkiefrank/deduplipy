@@ -1,17 +1,14 @@
 import operator
 import random
 import numpy as np
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import adjusted_rand_score
-from sklearn.metrics import normalized_mutual_info_score
-from sklearn.metrics import fowlkes_mallows_score
-from sklearn.metrics import homogeneity_completeness_v_measure
-
-from deduplipy.clustering import cdl_communities_to_clusters
+from sklearn.cluster import AffinityPropagation, MeanShift, MiniBatchKMeans
+from scipy.sparse.csgraph import connected_components
+from deduplipy.analyzing.metrics_collection import perform_scoring
+from deduplipy.clustering.ensemble_clustering import ClusterSimilarityMatrix
 from deduplipy.config import DEDUPLICATION_ID_NAME
 from entity_resolution_evaluation.evaluation import evaluate
 
-
+MIN_PROBABILITY = 0.75
 def get_cluster_column_name(clusteringalgorithm) -> str:
     if callable(clusteringalgorithm):
         return '_'.join([DEDUPLICATION_ID_NAME, clusteringalgorithm.__name__])
@@ -57,29 +54,19 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
     return returnval
 
 
-def perform_scoring(score, param, gt):
 
-    if score == 'silhouette_score':
-        pass
-    elif score == 'adjusted_rand_score':
-        return adjusted_rand_score(gt, param)
-    elif score == 'normalized_mutual_info_score':
-        return normalized_mutual_info_score(gt, param)
-    elif score == 'fowlkes_mallows_score':
-        return fowlkes_mallows_score(gt, param)
-    elif score == 'homogeneity_completeness_v_measure':
-        return homogeneity_completeness_v_measure(gt, param)
-    else:
-        pass
-
-def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None):
+def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None, labelless_scoring=None, colnames=None):
     if evaluations is None:
         evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     if scoring is None:
         scoring = ['adjusted_rand_score','normalized_mutual_info_score','fowlkes_mallows_score']
+    if labelless_scoring is None:
+        labelless_scoring = ['silhouette_score']
     labels = []
     mixed_best = []
-    cluster_groups_with_id = {'mixed_best': {}}
+    ensemble = []
+    cluster_groups_with_id = {'mixed_best': {},
+                              'ensemble_clustering': {}}
     cluster_algo_names = [name.__name__ for name in cluster_algorithms]
     component_ids = []
     for cluster_algo in cluster_algorithms:
@@ -94,8 +81,9 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         # get the ground truth clusters for this connected component
         gt = list(rows.groupby([groundtruth_name]).groups.values())
         temp = {}
+        labelless_temp = {}
         cluster_groups = {}
-
+        clt_sim_matrix = ClusterSimilarityMatrix()
         # loop over the cluster algorithms to get the resulting clusters per connected component.
         for cluster_algo in cluster_algorithms:
             algorith_name = cluster_algo.__name__
@@ -112,6 +100,24 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
                     true_labels = rows[groundtruth_name].values
                     pred_labels = rows[get_cluster_column_name(algorith_name)].values
                     temp[score][algorith_name] = perform_scoring(score, pred_labels, true_labels)
+            #if labelless_scoring is not None:
+            #    for labelless in labelless_scoring:
+            #        if labelless not in labelless_temp:
+            #            labelless_temp[labelless] = {}
+            #        clust_labels = rows[get_cluster_column_name(algorith_name)].values
+            #        data_values = rows[colnames]
+            #        labelless_temp[labelless][algorith_name] = perform_scoring(labelless, data_values, clust_labels)
+            clt_sim_matrix.fit(rows[get_cluster_column_name(algorith_name)].values)
+        sim_matrix = clt_sim_matrix.similarity
+        norm_sim_matrix = sim_matrix / sim_matrix.diagonal()
+        graph = (norm_sim_matrix > MIN_PROBABILITY).astype(int)
+        n_clusters, y_ensemble = connected_components(graph, directed=False, return_labels=True)
+        ensemble_ids = [x+connectid for x in y_ensemble]
+        rows[DEDUPLICATION_ID_NAME + "_ensemble"] = ensemble_ids
+        ens = list(rows.groupby([DEDUPLICATION_ID_NAME + "_ensemble"]).groups.values())
+        for gs_ in ens:
+            ensemble.append(gs_)
+        cluster_groups_with_id['ensemble_clustering'][connectid] = ens
         # if there is only one row for this connected component then we don't have to pick a clustering and just use the connected component.
         if len(rows) < 2:
             resul = list(rows.groupby([connected_col]).groups.values())
@@ -121,7 +127,6 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             continue
 
         # get the algo winner and add the features of this connected component to the name of the winner
-        #print(np.random.get_state())
         algo_winner = select_winner(temp, eval_priorities, cluster_algorithms, connectid)
         # add the label of the winner to the labels array
         labels.append(label_diction[algo_winner])
@@ -133,7 +138,7 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             mixed_best.append(gs)
         cluster_groups_with_id['mixed_best'][connectid] = cluster_groups[algo_winner]
 
-    return cluster_groups_with_id, labels, mixed_best, component_ids
+    return cluster_groups_with_id, labels, mixed_best, component_ids, ensemble
 
 
 def predictions_to_clusters(label_predictions, data_indices, connected_component_ids, total_clustering_result, labels_dictionary, _cluster_groups_with_id, cluster_algos, connected_col, groundtruth_name):
@@ -141,6 +146,7 @@ def predictions_to_clusters(label_predictions, data_indices, connected_component
     sub = {}
     sub['mixed_best'] = []
     sub['predicted_clustering'] = []
+    sub['ensemble_clustering'] = []
     for cluster_algo in cluster_algos:
         algorith_name = cluster_algo.__name__
         sub[algorith_name] = []
