@@ -7,7 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 from deduplipy.analyzing.cluster_method_prediction import get_cluster_column_name, get_mixed_best, \
-    predictions_to_clusters
+    predictions_to_clusters, learn_ensemble_weights
 from deduplipy.clustering.clustering import *
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
@@ -36,6 +36,7 @@ save_intermediate = False
 pickle_name = None
 groupby_name = None
 field_info = None
+mes = None
 
 if dataset == 'musicbrainz20k':
     df = load_data(kind='musicbrainz20k')
@@ -143,14 +144,14 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.3, 0.35, 0.4, 0.45]
+score_threshes = [0.3]#, 0.35, 0.4, 0.45]
 for score_thresh in score_threshes:
-    mes = f"Running with scorethreshold of: {score_thresh}"
+    #mes = f"Running with scorethreshold of: {score_thresh}, picking precision heavy algorithms with some recall heavy, no weight on the ensemble clustering now"
     feature_count = 15
     train_test_split_number = 0.4
     random_state_number = 1
     np.random.seed(random_state_number)
-    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, greedy_modularity, louvain, affinity_propagation, optics, cdlib_scan, cdlib_pycombo, cdlib_der, cdlib_dcs, cdlib_ipca, cdlib_spinglass, walktrap]
+    cluster_algos = [connected_components, hierarchical_clustering, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo]
     cluster_algo_names = [name.__name__ for name in cluster_algos]
     args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
             markov_clustering.__name__: {'inflation': 2},
@@ -183,16 +184,26 @@ for score_thresh in score_threshes:
     r4 = []
     s = list(group.groups.values())
     result['label_dict'] = label_dict
-    rs['mixed_best'] = []
+    #rs['mixed_best'] = []
     evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     print("----------------------------")
 
 
     eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
     result['eval_prios'] = eval_prios
+
+    # perform pairwise evaluation on the entire clustering
+    result |= perform_evaluation(rs, s)
+    weights = {}
+    for name in cluster_algo_names:
+        weights[name] = result[name]['f1']
+
     groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
-    rs['mixed_best'] = mixed_best_array
-    rs['ensemble_clustering'] = ensemble_clusterings
+    rs2 = {}
+    rs2['mixed_best'] = mixed_best_array
+    rs2['ensemble_clustering'] = ensemble_clusterings
+    result |= perform_evaluation(rs2, s)
+
     labels = np.array(labels)
     print(f"Amount of records per classlabel:{sorted(Counter(labels).items())}")
     modelstatspy = []
@@ -259,10 +270,6 @@ for score_thresh in score_threshes:
 
     all_predictions = output2  # model.predict(X_test)
     acc_score = accuracy_score(Y_test, all_predictions)
-
-
-    # perform pairwise evaluation on the entire clustering
-    result |= perform_evaluation(rs, s)
 
     #gt_ = list(res[res[connected_col].isin(connectids)].groupby([groupby_name]).groups.values())
 

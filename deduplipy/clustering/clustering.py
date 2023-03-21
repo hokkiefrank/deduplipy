@@ -148,6 +148,19 @@ def markov_clustering(subgraph, inflation: float = 2) -> np.ndarray:
     return clusters
 
 
+def markov_clustering_on_adjacency(adj, pruning_value=0.001):
+    result = mc.run_mcl(adj, pruning_threshold=pruning_value)
+    mc_clusters = mc.get_clusters(result)
+    clust_ind = 1
+    mc_clusters_formatted = [0] * adj.shape[0]
+    for clust in mc_clusters:
+        for val in clust:
+            mc_clusters_formatted[val] = clust_ind
+        clust_ind += 1
+    clusters = numpy.array(mc_clusters_formatted)
+
+    return clusters
+
 def connected_components(subgraph) -> np.ndarray:
     """
     As the connected components algorithm is already in the base step of clustering, all it has to do is return
@@ -177,6 +190,12 @@ def optics(subgraph, min_samples: int = 5):
         adjacency = nx.to_numpy_array(subgraph, weight='score')
         opt = OPTICS(min_samples=min_samples).fit(adjacency)
         clusters = opt.labels_
+        clustindex = max(clusters) + 1
+        for clustid in range(len(clusters)):
+            clust = clusters[clustid]
+            if clust == -1:
+                clusters[clustid] = clustindex
+                clustindex += 1
     else:
         clusters = np.array([1])
 

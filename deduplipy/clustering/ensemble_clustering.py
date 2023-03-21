@@ -7,13 +7,13 @@ class ClusterSimilarityMatrix():
     def __init__(self) -> None:
         self._is_fitted = False
 
-    def fit(self, y_clusters):
+    def fit(self, y_clusters, weight=1):
         if not self._is_fitted:
             self._is_fitted = True
-            self.similarity = self.to_binary_matrix(y_clusters)
+            self.similarity = (self.to_binary_matrix(y_clusters) * weight)
             return self
 
-        self.similarity += self.to_binary_matrix(y_clusters)
+        self.similarity += (self.to_binary_matrix(y_clusters) * weight)
 
     def to_binary_matrix(self, y_clusters):
         y_reshaped = np.expand_dims(y_clusters, axis=-1)

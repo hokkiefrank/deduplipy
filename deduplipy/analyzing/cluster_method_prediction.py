@@ -6,6 +6,7 @@ from scipy.sparse.csgraph import connected_components
 from deduplipy.analyzing.metrics_collection import perform_scoring
 from deduplipy.clustering.ensemble_clustering import ClusterSimilarityMatrix
 from deduplipy.config import DEDUPLICATION_ID_NAME, MIN_PROBABILITY
+from deduplipy.clustering.clustering import markov_clustering_on_adjacency
 from entity_resolution_evaluation.evaluation import evaluate
 
 
@@ -55,7 +56,7 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
 
 
 
-def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None, labelless_scoring=None, colnames=None):
+def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None, labelless_scoring=None, colnames=None, weights=None):
     if evaluations is None:
         evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     if scoring is None:
@@ -65,6 +66,7 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
     labels = []
     mixed_best = []
     ensemble = []
+    learn_weights = True
     cluster_groups_with_id = {'mixed_best': {},
                               'ensemble_clustering': {}}
     cluster_algo_names = [name.__name__ for name in cluster_algorithms]
@@ -72,6 +74,11 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
     for cluster_algo in cluster_algorithms:
         algorith_name = cluster_algo.__name__
         cluster_groups_with_id[algorith_name] = {}
+
+    if learn_weights:
+        counter = 2
+        weights = learn_ensemble_weights(connected_components_clusters, counter, groundtruth_name)
+
     # loop over the results of the connected components to label which algorithm wins the connected component for the model
     for g in connected_components_clusters:
         # get the rows from the dataframe belonging to that connected component
@@ -107,11 +114,16 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             #        clust_labels = rows[get_cluster_column_name(algorith_name)].values
             #        data_values = rows[colnames]
             #        labelless_temp[labelless][algorith_name] = perform_scoring(labelless, data_values, clust_labels)
-            clt_sim_matrix.fit(rows[get_cluster_column_name(algorith_name)].values)
+            if weights is not None:
+                w = weights[algorith_name]
+            else:
+                w = 1
+            clt_sim_matrix.fit(rows[get_cluster_column_name(algorith_name)].values, w)
         sim_matrix = clt_sim_matrix.similarity
         norm_sim_matrix = sim_matrix / sim_matrix.diagonal()
         graph = (norm_sim_matrix > MIN_PROBABILITY).astype(int)
         n_clusters, y_ensemble = connected_components(graph, directed=False, return_labels=True)
+        #y_ensemble = markov_clustering_on_adjacency(norm_sim_matrix, pruning_value=0.1)
         ensemble_ids = [x+connectid for x in y_ensemble]
         rows[DEDUPLICATION_ID_NAME + "_ensemble"] = ensemble_ids
         ens = list(rows.groupby([DEDUPLICATION_ID_NAME + "_ensemble"]).groups.values())
@@ -177,3 +189,7 @@ def predictions_to_clusters(label_predictions, data_indices, connected_component
                 sub[key].append(x)
     # sub is a dictionary with as key the algorithm name and value the list of clusterings
     return sub, my_gt
+
+
+def learn_ensemble_weights(clusters, counter, name):
+    pass
