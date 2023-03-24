@@ -1,7 +1,11 @@
+import itertools
 import operator
 import random
+from random import shuffle
+import numpy
 import numpy as np
 from sklearn.cluster import AffinityPropagation, MeanShift, MiniBatchKMeans
+from sklearn.linear_model import LinearRegression
 from scipy.sparse.csgraph import connected_components
 from deduplipy.analyzing.metrics_collection import perform_scoring
 from deduplipy.clustering.ensemble_clustering import ClusterSimilarityMatrix
@@ -76,8 +80,8 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         cluster_groups_with_id[algorith_name] = {}
 
     if learn_weights:
-        counter = 2
-        weights = learn_ensemble_weights(connected_components_clusters, counter, groundtruth_name)
+        counter = 200
+        weights = learn_ensemble_weights(connected_components_clusters, counter, groundtruth_name, total_resulting_clusters, cluster_algorithms)
 
     # loop over the results of the connected components to label which algorithm wins the connected component for the model
     for g in connected_components_clusters:
@@ -150,7 +154,7 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             mixed_best.append(gs)
         cluster_groups_with_id['mixed_best'][connectid] = cluster_groups[algo_winner]
 
-    return cluster_groups_with_id, labels, mixed_best, component_ids, ensemble
+    return cluster_groups_with_id, labels, mixed_best, component_ids, ensemble, weights
 
 
 def predictions_to_clusters(label_predictions, data_indices, connected_component_ids, total_clustering_result, labels_dictionary, _cluster_groups_with_id, cluster_algos, connected_col, groundtruth_name):
@@ -191,5 +195,81 @@ def predictions_to_clusters(label_predictions, data_indices, connected_component
     return sub, my_gt
 
 
-def learn_ensemble_weights(clusters, counter, name):
-    pass
+def learn_ensemble_weights(connected_clusters, min_edge_count, name, total_resulting_clusters, cluster_algorithms):
+    total_edgelist = {}
+    labels = []
+    for g in connected_clusters:
+        if min_edge_count < len(labels):
+            break
+
+        edgelist = {}
+        # get the rows from the dataframe belonging to that connected component
+        rows = total_resulting_clusters.loc[g]
+        # get the ground truth clusters for this connected component
+
+        for cluster_algo in cluster_algorithms:
+            algorith_name = cluster_algo.__name__
+            clusters = list(rows.groupby([get_cluster_column_name(cluster_algo)]).groups.values())
+            all_combs = []
+            for cluster in clusters:
+                combs = list(itertools.combinations(cluster, 2))
+                all_combs += combs
+            if algorith_name == 'connected_components':
+                for edge in combs:
+                    if edge not in edgelist:
+                        edgelist[edge] = []
+                    edgelist[edge].append(1)
+            else:
+                for key in edgelist.keys():
+                    if key in all_combs:
+                        edgelist[key].append(1)
+                    else:
+                        edgelist[key].append(0)
+        total_edgelist |= edgelist
+        gt = list(rows.groupby([name]).groups.values())
+        all_gt = []
+        for cluster in gt:
+            combs = list(itertools.combinations(cluster, 2))
+            all_gt += combs
+
+        for key in edgelist.keys():
+            if key in all_gt:
+                labels.append(1)
+            else:
+                labels.append(0)
+
+    modelstatspy = []
+    for key, value in total_edgelist.items():
+        # Convert object to a list
+        data_ = list(value)
+        modelstatspy.append(data_)
+    modelstats = np.array(modelstatspy)
+    labels = np.array(labels)
+    final_labels_true = np.where(labels == 1)[0]
+    final_labels_false = np.where(labels == 0)[0]
+
+    if len(final_labels_true) > len(final_labels_false):
+        shuffle(final_labels_true)
+        final_labels_true = final_labels_true[:len(final_labels_false)]
+    else:
+        shuffle(final_labels_false)
+        final_labels_false = final_labels_false[:len(final_labels_true)]
+    final_label_indices = np.concatenate((final_labels_true, final_labels_false), axis=None)
+    actual_labels = []
+    actual_edgelist = []
+    for label_index in final_label_indices:
+        actual_labels.append(labels[label_index])
+        actual_edgelist.append(modelstats[label_index])
+    reg = LinearRegression().fit(actual_edgelist, actual_labels)
+    score = reg.score(actual_edgelist, actual_labels)
+    print(f"The models score is: {score}")
+    coefs = reg.coef_
+    coef_per_name = {}
+    teller = 0
+    for cluster_algo in cluster_algorithms:
+        algorith_name = cluster_algo.__name__
+        coef_per_name[algorith_name] = coefs[teller]
+        teller += 1
+
+    print(f"Coefficients per name in the linear regression:{coef_per_name}")
+    return coef_per_name

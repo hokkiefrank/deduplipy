@@ -1,3 +1,4 @@
+import itertools
 import json
 import operator
 import random
@@ -144,14 +145,17 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.3]#, 0.35, 0.4, 0.45]
-for score_thresh in score_threshes:
-    #mes = f"Running with scorethreshold of: {score_thresh}, picking precision heavy algorithms with some recall heavy, no weight on the ensemble clustering now"
+score_threshes = [0.3, 0.35, 0.4, 0.45]
+random_states = range(5)
+config_options = list(itertools.product(score_threshes, random_states))
+for config_option in config_options:
+    score_thresh = config_option[0]
+    random_state_number = config_option[1]
+    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number}, ensemble clustering now by linear regression and with minprob at 0.6, reduced traintestsplitnumber"
     feature_count = 15
-    train_test_split_number = 0.4
-    random_state_number = 1
+    train_test_split_number = 0.2
     np.random.seed(random_state_number)
-    cluster_algos = [connected_components, hierarchical_clustering, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo]
+    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo, louvain]
     cluster_algo_names = [name.__name__ for name in cluster_algos]
     args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
             markov_clustering.__name__: {'inflation': 2},
@@ -198,7 +202,8 @@ for score_thresh in score_threshes:
     for name in cluster_algo_names:
         weights[name] = result[name]['f1']
 
-    groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
+    groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings, obtained_weights = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names)
+    result['weights'] = obtained_weights
     rs2 = {}
     rs2['mixed_best'] = mixed_best_array
     rs2['ensemble_clustering'] = ensemble_clusterings
