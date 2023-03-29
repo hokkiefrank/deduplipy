@@ -1,7 +1,6 @@
 import itertools
 import operator
 import random
-from random import shuffle
 import numpy
 import numpy as np
 from sklearn.cluster import AffinityPropagation, MeanShift, MiniBatchKMeans
@@ -60,7 +59,7 @@ def select_winner(evaluation_metrics_results: dict, evaluation_metrics_importanc
 
 
 
-def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None, labelless_scoring=None, colnames=None, weights=None):
+def get_mixed_best(connected_components_clusters, total_resulting_clusters, cluster_algorithms, label_diction, eval_priorities, connected_col, groundtruth_name, evaluations=None, scoring=None, labelless_scoring=None, colnames=None, weights=None, random_state=42):
     if evaluations is None:
         evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     if scoring is None:
@@ -69,10 +68,15 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         labelless_scoring = ['silhouette_score']
     labels = []
     mixed_best = []
-    ensemble = []
+    ensemble = {}
+
     learn_weights = True
-    cluster_groups_with_id = {'mixed_best': {},
-                              'ensemble_clustering': {}}
+    cluster_groups_with_id = {'mixed_best': {}}
+    for probs in MIN_PROBABILITY:
+        ensemble['ensemble_no_weight_'+str(probs)] = []
+        ensemble['ensemble_weighted_' + str(probs)] = []
+        cluster_groups_with_id['ensemble_no_weight_'+str(probs)] = {}
+        cluster_groups_with_id['ensemble_weighted_' + str(probs)] = {}
     cluster_algo_names = [name.__name__ for name in cluster_algorithms]
     component_ids = []
     for cluster_algo in cluster_algorithms:
@@ -81,7 +85,7 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
 
     if learn_weights:
         counter = 200
-        weights = learn_ensemble_weights(connected_components_clusters, counter, groundtruth_name, total_resulting_clusters, cluster_algorithms)
+        weights = learn_ensemble_weights(connected_components_clusters, counter, groundtruth_name, total_resulting_clusters, cluster_algorithms, random_state)
 
     # loop over the results of the connected components to label which algorithm wins the connected component for the model
     for g in connected_components_clusters:
@@ -95,6 +99,7 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
         labelless_temp = {}
         cluster_groups = {}
         clt_sim_matrix = ClusterSimilarityMatrix()
+        clt_sim_matrix_unweighted = ClusterSimilarityMatrix()
         # loop over the cluster algorithms to get the resulting clusters per connected component.
         for cluster_algo in cluster_algorithms:
             algorith_name = cluster_algo.__name__
@@ -123,17 +128,16 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
             else:
                 w = 1
             clt_sim_matrix.fit(rows[get_cluster_column_name(algorith_name)].values, w)
+            clt_sim_matrix_unweighted.fit(rows[get_cluster_column_name(algorith_name)].values, 1)
+
         sim_matrix = clt_sim_matrix.similarity
+        sim_matrix_unweighted = clt_sim_matrix_unweighted.similarity
+
         norm_sim_matrix = sim_matrix / sim_matrix.diagonal()
-        graph = (norm_sim_matrix > MIN_PROBABILITY).astype(int)
-        n_clusters, y_ensemble = connected_components(graph, directed=False, return_labels=True)
-        #y_ensemble = markov_clustering_on_adjacency(norm_sim_matrix, pruning_value=0.1)
-        ensemble_ids = [x+connectid for x in y_ensemble]
-        rows[DEDUPLICATION_ID_NAME + "_ensemble"] = ensemble_ids
-        ens = list(rows.groupby([DEDUPLICATION_ID_NAME + "_ensemble"]).groups.values())
-        for gs_ in ens:
-            ensemble.append(gs_)
-        cluster_groups_with_id['ensemble_clustering'][connectid] = ens
+        norm_sim_matrix_unweighted = sim_matrix_unweighted / sim_matrix_unweighted.diagonal()
+        rows, ensemble, cluster_groups_with_id = ensemble_matrix_to_clusters(norm_sim_matrix, connectid, rows, ensemble, cluster_groups_with_id, 'ensemble_weighted_')
+        rows, ensemble, cluster_groups_with_id = ensemble_matrix_to_clusters(norm_sim_matrix_unweighted, connectid, rows, ensemble,cluster_groups_with_id, 'ensemble_no_weight_')
+
         # if there is only one row for this connected component then we don't have to pick a clustering and just use the connected component.
         if len(rows) < 2:
             resul = list(rows.groupby([connected_col]).groups.values())
@@ -157,15 +161,28 @@ def get_mixed_best(connected_components_clusters, total_resulting_clusters, clus
     return cluster_groups_with_id, labels, mixed_best, component_ids, ensemble, weights
 
 
+def ensemble_matrix_to_clusters(normalized_similarity_matrix, connect_id, rows, ensemble, cluster_groups_with_id, name_start):
+    for probability in MIN_PROBABILITY:
+        graph = (normalized_similarity_matrix > probability).astype(int)
+
+        n_clusters, y_ensemble = connected_components(graph, directed=False, return_labels=True)
+        # y_ensemble = markov_clustering_on_adjacency(norm_sim_matrix, pruning_value=0.1)
+        ensemble_ids = [x + connect_id for x in y_ensemble]
+        rows[DEDUPLICATION_ID_NAME + "_" + name_start + str(probability)] = ensemble_ids
+        ens = list(rows.groupby([DEDUPLICATION_ID_NAME + "_" + name_start + str(probability)]).groups.values())
+        for gs_ in ens:
+            ensemble[name_start + str(probability)].append(gs_)
+        cluster_groups_with_id[name_start + str(probability)][connect_id] = ens
+
+    return rows, ensemble, cluster_groups_with_id
+
 def predictions_to_clusters(label_predictions, data_indices, connected_component_ids, total_clustering_result, labels_dictionary, _cluster_groups_with_id, cluster_algos, connected_col, groundtruth_name):
     my_gt = []
     sub = {}
-    sub['mixed_best'] = []
+    for key in _cluster_groups_with_id.keys():
+        sub[key] = []
     sub['predicted_clustering'] = []
-    sub['ensemble_clustering'] = []
-    for cluster_algo in cluster_algos:
-        algorith_name = cluster_algo.__name__
-        sub[algorith_name] = []
+
     cluster_algo_names = [name.__name__ for name in cluster_algos]
 
     for i in range(len(data_indices)):
@@ -195,7 +212,7 @@ def predictions_to_clusters(label_predictions, data_indices, connected_component
     return sub, my_gt
 
 
-def learn_ensemble_weights(connected_clusters, min_edge_count, name, total_resulting_clusters, cluster_algorithms):
+def learn_ensemble_weights(connected_clusters, min_edge_count, name, total_resulting_clusters, cluster_algorithms, random_state):
     total_edgelist = {}
     labels = []
     for g in connected_clusters:
@@ -249,10 +266,10 @@ def learn_ensemble_weights(connected_clusters, min_edge_count, name, total_resul
     final_labels_false = np.where(labels == 0)[0]
 
     if len(final_labels_true) > len(final_labels_false):
-        shuffle(final_labels_true)
+        random.Random(random_state).shuffle(final_labels_true)
         final_labels_true = final_labels_true[:len(final_labels_false)]
     else:
-        shuffle(final_labels_false)
+        random.Random(random_state).shuffle(final_labels_false)
         final_labels_false = final_labels_false[:len(final_labels_true)]
     final_label_indices = np.concatenate((final_labels_true, final_labels_false), axis=None)
     actual_labels = []
