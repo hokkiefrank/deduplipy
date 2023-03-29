@@ -29,7 +29,7 @@ from numpy import std
 
 import pickle
 
-dataset = 'musicbrainz20k'
+dataset = 'cora'
 learning = False
 pairs = None
 pairs_name = None
@@ -135,6 +135,26 @@ elif dataset == 'voters':
         with open('voters5m.pkl', 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
+
+elif dataset == 'cora':
+    df = load_data(kind='cora')
+    groupby_name = ''
+    group = df.groupby([groupby_name])
+    groundtruth = group.indices
+    myDedupliPy = Deduplicator()
+    myDedupliPy.verbose = True
+    pickle_name = ''
+    if learning:
+        myDedupliPy.save_intermediate_steps = save_intermediate
+        myDedupliPy.fit(df)
+        with open(pickle_name, 'wb') as f:
+            pickle.dump(myDedupliPy, f)
+    else:
+        with open(pickle_name, 'rb') as f:
+            myDedupliPy = pickle.load(f)
+            myDedupliPy.save_intermediate_steps = save_intermediate
+    #pairs_name = "scored_pairs_table_musicbrainz20k_single_oneletterblocking.csv"
+    #pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 else:
     print("unknown")
     exit(0)

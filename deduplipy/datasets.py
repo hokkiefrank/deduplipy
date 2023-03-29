@@ -64,6 +64,14 @@ def load_music_single(count):
     df = df[['CID', 'value']]
     return df
 
+
+def load_cora():
+    file_path = resource_filename('deduplipy', os.path.join('data', 'cora.tsv'))
+    df = pd.read_csv(file_path, sep='\t')
+    gt_file = resource_filename('deduplipy', os.path.join('data', 'cora_DPL.tsv'))
+    gt_df = pd.read_csv(gt_file, sep='\t')
+
+
 def load_data(kind: str = 'voters', count:int =20) -> pd.DataFrame:
     """
     Load data for experimentation. `kind` can be 'stoxx50', 'voters', 'musicbrainz20k', 'musicbrainz200k', 'affiliations' or 'voters5m'.
@@ -92,3 +100,5 @@ def load_data(kind: str = 'voters', count:int =20) -> pd.DataFrame:
         return load_music_single(count)
     elif kind == 'voters5m':
         return load_voters_5m()
+    elif kind == 'cora':
+        return load_cora()
