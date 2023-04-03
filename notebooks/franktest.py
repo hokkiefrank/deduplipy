@@ -30,10 +30,10 @@ from numpy import std
 import pickle
 
 dataset = 'cora'
-learning = True
+learning = False
 pairs = None
 pairs_name = None
-save_intermediate = True
+save_intermediate = False
 pickle_name = None
 groupby_name = None
 field_info = None
@@ -125,7 +125,8 @@ elif dataset == 'voters':
     groupby_name = 'recid'
     group = df.groupby([groupby_name])
     groundtruth = group.indices
-    myDedupliPy = Deduplicator(['givenname', 'surname', 'suburb', 'postcode'], rules={'givenname': [first_three_letters], 'surname': [first_three_letters]})
+    myDedupliPy = Deduplicator(['givenname', 'surname', 'suburb', 'postcode'],
+                               rules={'givenname': [first_three_letters], 'surname': [first_three_letters]})
     myDedupliPy.verbose = True
     if learning:
         myDedupliPy.fit(df)
@@ -141,7 +142,8 @@ elif dataset == 'cora':
     groupby_name = 'gt_id'
     group = df.groupby([groupby_name])
     groundtruth = group.indices
-    myDedupliPy = Deduplicator(['authors', 'title'], rules={'authors': [first_two_letters], 'title': [first_two_letters]})
+    myDedupliPy = Deduplicator(['authors', 'title'],
+                               rules={'authors': [first_two_letters], 'title': [first_two_letters]})
     myDedupliPy.verbose = True
     pickle_name = 'cora_customblocking_two_letters.pkl'
     if learning:
@@ -153,19 +155,18 @@ elif dataset == 'cora':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    #pairs_name = "score_pairs_table_cora_custom_blocking.csv"
-    #pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
+    pairs_name = "score_pairs_table_cora_custom_blocking.csv"
+    pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 else:
     print("unknown")
     exit(0)
 
 amount = len(df)
 
-
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.3, 0.35, 0.4, 0.45]
+score_threshes = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
 random_states = range(7)
 config_options = list(itertools.product(score_threshes, random_states))
 for config_option in config_options:
@@ -175,7 +176,8 @@ for config_option in config_options:
     feature_count = 15
     train_test_split_number = 0.2
     np.random.seed(random_state_number)
-    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo, walktrap, cdlib_scan]
+    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, cdlib_ipca, cdlib_dcs,
+                     cdlib_pycombo, walktrap, cdlib_scan]
     cluster_algo_names = [name.__name__ for name in cluster_algos]
     args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
             markov_clustering.__name__: {'inflation': 2},
@@ -208,12 +210,12 @@ for config_option in config_options:
     r4 = []
     s = list(group.groups.values())
     result['label_dict'] = label_dict
-    #rs['mixed_best'] = []
+    # rs['mixed_best'] = []
     evaluations = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
     print("----------------------------")
 
-
-    eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5, 'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
+    eval_prios = {'adjusted_rand_score': 10, 'normalized_mutual_info_score': 20, 'fowlkes_mallows_score': 30, 'f1': 5,
+                  'bmd': 6, 'variation_of_information': 7, 'recall': 9, 'precision': 8}
     result['eval_prios'] = eval_prios
 
     # perform pairwise evaluation on the entire clustering
@@ -222,7 +224,9 @@ for config_option in config_options:
     for name in cluster_algo_names:
         weights[name] = result[name]['f1']
 
-    groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings, obtained_weights = get_mixed_best(rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name, colnames=myDedupliPy.col_names, random_state=random_state_number)
+    groups_with_id, labels, mixed_best_array, connectids, ensemble_clusterings, obtained_weights = get_mixed_best(
+        rs[connected_components.__name__], res, cluster_algos, label_dict, eval_prios, connected_col, groupby_name,
+        colnames=myDedupliPy.col_names, random_state=random_state_number)
     result['weights'] = obtained_weights
     rs2 = {}
     rs2['mixed_best'] = mixed_best_array
@@ -247,11 +251,12 @@ for config_option in config_options:
     ### this way we evaluate on the total clustering but only predict on components of size > 1.
     X_train, X_test, Y_train, Y_test, indices_train, indices_test = train_test_split(modelstats, labels, indices,
                                                                                      test_size=train_test_split_number,
-                                                                                     #stratify=labels,
+                                                                                     # stratify=labels,
                                                                                      random_state=random_state_number)
     singleton_CC = res[connected_col].value_counts()
     singleton_CC = singleton_CC[singleton_CC == 1].index
-    CCindices_train, CCindices_test = train_test_split(singleton_CC, test_size=train_test_split_number,random_state=random_state_number)
+    CCindices_train, CCindices_test = train_test_split(singleton_CC, test_size=train_test_split_number,
+                                                       random_state=random_state_number)
     indices_to_append = []
     for val in CCindices_test:
         indices_to_append.append(connectids.index(val))
@@ -262,13 +267,14 @@ for config_option in config_options:
     supp = skb.get_support(indices=True)
     print(supp)
 
-    model = LogisticRegression(random_state=random_state_number, class_weight='balanced')  # , multi_class='multinomial')
+    model = LogisticRegression(random_state=random_state_number,
+                               class_weight='balanced')  # , multi_class='multinomial')
     print(f"Amount of records per classlabel in the trainingset:{sorted(Counter(Y_train).items())}")
-    #from imblearn.over_sampling import SMOTE
+    # from imblearn.over_sampling import SMOTE
     #
-    #sm = SMOTE(random_state=random_state_number)
-    #X_res, y_res = sm.fit_resample(X_train, Y_train)
-    #print(sorted(Counter(y_res).items()))
+    # sm = SMOTE(random_state=random_state_number)
+    # X_res, y_res = sm.fit_resample(X_train, Y_train)
+    # print(sorted(Counter(y_res).items()))
     model = model.fit(X_train, Y_train)
 
     output2 = model.predict(X_test)
@@ -297,10 +303,11 @@ for config_option in config_options:
     all_predictions = output2  # model.predict(X_test)
     acc_score = accuracy_score(Y_test, all_predictions)
 
-    #gt_ = list(res[res[connected_col].isin(connectids)].groupby([groupby_name]).groups.values())
+    # gt_ = list(res[res[connected_col].isin(connectids)].groupby([groupby_name]).groups.values())
 
     print("ONLY ON THE TEST SPLIT AFTER THIS LINE -----------------------------------------\n")
-    sub, gt = predictions_to_clusters(all_predictions, indices_test, connectids, res, label_dict, groups_with_id, cluster_algos, connected_col, groupby_name)
+    sub, gt = predictions_to_clusters(all_predictions, indices_test, connectids, res, label_dict, groups_with_id,
+                                      cluster_algos, connected_col, groupby_name)
     # convert the
     rf = {}
     for key in sub.keys():
