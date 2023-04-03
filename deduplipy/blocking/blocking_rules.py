@@ -49,6 +49,14 @@ def first_letter(x):
         return None
 
 
+def first_two_letters(x):
+    x_trimmed = x.strip().lower()
+    if len(x_trimmed):
+        return x_trimmed[:2]
+    else:
+        return None
+
+
 def first_three_letters(x: str):
     x_trimmed = x.strip().lower()
     if len(x_trimmed):

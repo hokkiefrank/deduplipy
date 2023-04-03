@@ -12,7 +12,7 @@ from deduplipy.analyzing.cluster_method_prediction import get_cluster_column_nam
 from deduplipy.clustering.clustering import *
 from deduplipy.datasets import load_data
 from deduplipy.deduplicator import Deduplicator
-from deduplipy.blocking import first_letter, first_three_letters, first_four_letters_no_space
+from deduplipy.blocking import first_letter, first_two_letters, first_three_letters, first_four_letters_no_space
 from deduplipy.evaluation.pairwise_evaluation import perform_evaluation
 from deduplipy.string_metrics import three_gram
 from deduplipy.config import MIN_PROBABILITY
@@ -30,10 +30,10 @@ from numpy import std
 import pickle
 
 dataset = 'cora'
-learning = False
+learning = True
 pairs = None
 pairs_name = None
-save_intermediate = False
+save_intermediate = True
 pickle_name = None
 groupby_name = None
 field_info = None
@@ -138,12 +138,12 @@ elif dataset == 'voters':
 
 elif dataset == 'cora':
     df = load_data(kind='cora')
-    groupby_name = ''
+    groupby_name = 'gt_id'
     group = df.groupby([groupby_name])
     groundtruth = group.indices
-    myDedupliPy = Deduplicator()
+    myDedupliPy = Deduplicator(['authors', 'title'], rules={'authors': [first_two_letters], 'title': [first_two_letters]})
     myDedupliPy.verbose = True
-    pickle_name = ''
+    pickle_name = 'cora_customblocking_two_letters.pkl'
     if learning:
         myDedupliPy.save_intermediate_steps = save_intermediate
         myDedupliPy.fit(df)
@@ -153,7 +153,7 @@ elif dataset == 'cora':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    #pairs_name = "scored_pairs_table_musicbrainz20k_single_oneletterblocking.csv"
+    #pairs_name = "score_pairs_table_cora_custom_blocking.csv"
     #pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 else:
     print("unknown")
@@ -165,17 +165,17 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.3]#, 0.35, 0.4, 0.45]
-random_states = range(1)
+score_threshes = [0.3, 0.35, 0.4, 0.45]
+random_states = range(7)
 config_options = list(itertools.product(score_threshes, random_states))
 for config_option in config_options:
     score_thresh = config_option[0]
     random_state_number = config_option[1]
-    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once"
+    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once, cora dataset this time"
     feature_count = 15
     train_test_split_number = 0.2
     np.random.seed(random_state_number)
-    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering]#, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo, louvain, walktrap, greedy_modularity, cdlib_der, cdlib_scan, affinity_propagation]
+    cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, cdlib_ipca, cdlib_dcs, cdlib_pycombo, walktrap, cdlib_scan]
     cluster_algo_names = [name.__name__ for name in cluster_algos]
     args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
             markov_clustering.__name__: {'inflation': 2},
