@@ -1,3 +1,4 @@
+import json
 import os
 from pkg_resources import resource_filename
 import numpy as np
@@ -96,6 +97,32 @@ def load_cora():
     return df
 
 
+def load_settlements():
+    file_path = resource_filename('deduplipy', os.path.join('data', 'settlements.json'))
+    with open(file_path) as f:
+        Lines = f.readlines()
+        formatted = {}
+        formatted['id'] = []
+        formatted['label'] = []
+        for line in Lines:
+            jsons = json.loads(line)
+            formatted['id'].append(jsons['id'])
+            formatted['label'].append(jsons['data']['label'])
+        df = pd.DataFrame(formatted)
+    gt_file = resource_filename('deduplipy', os.path.join('data', 'combinedSettlements(PerfectMatch).json'))
+    with open(gt_file) as f:
+        Lines = f.readlines()
+        clust_count = 0
+        for line in Lines:
+            jsons = json.loads(line)
+            for ids in jsons['data']['clusteredVertices']:
+                df.loc[df.id == ids, 'gt_id'] = clust_count
+            clust_count += 1
+    df = df [['gt_id', 'label']]
+    df['label'] = df['label'].astype('U').values
+    return df
+
+
 def load_data(kind: str = 'voters', count:int =20) -> pd.DataFrame:
     """
     Load data for experimentation. `kind` can be 'stoxx50', 'voters', 'musicbrainz20k', 'musicbrainz200k', 'affiliations' or 'voters5m'.
@@ -126,3 +153,5 @@ def load_data(kind: str = 'voters', count:int =20) -> pd.DataFrame:
         return load_voters_5m()
     elif kind == 'cora':
         return load_cora()
+    elif kind == 'settlements':
+        return load_settlements()

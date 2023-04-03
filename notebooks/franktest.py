@@ -29,7 +29,7 @@ from numpy import std
 
 import pickle
 
-dataset = 'cora'
+dataset = 'settlements'
 learning = False
 pairs = None
 pairs_name = None
@@ -157,6 +157,26 @@ elif dataset == 'cora':
             myDedupliPy.save_intermediate_steps = save_intermediate
     pairs_name = "score_pairs_table_cora_custom_blocking.csv"
     pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
+
+elif dataset == 'settlements':
+    df = load_data(kind='settlements')
+    groupby_name = 'gt_id'
+    group = df.groupby([groupby_name])
+    groundtruth = group.indices
+    myDedupliPy = Deduplicator(['label'])
+    myDedupliPy.verbose = True
+    pickle_name = 'settlements_first_test.pkl'
+    if learning:
+        myDedupliPy.save_intermediate_steps = save_intermediate
+        myDedupliPy.fit(df)
+        with open(pickle_name, 'wb') as f:
+            pickle.dump(myDedupliPy, f)
+    else:
+        with open(pickle_name, 'rb') as f:
+            myDedupliPy = pickle.load(f)
+            myDedupliPy.save_intermediate_steps = save_intermediate
+    pairs_name = "scored_pairs_table_settlements_05.csv"
+    pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 else:
     print("unknown")
     exit(0)
@@ -166,13 +186,13 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
+score_threshes = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
 random_states = range(7)
 config_options = list(itertools.product(score_threshes, random_states))
 for config_option in config_options:
     score_thresh = config_option[0]
     random_state_number = config_option[1]
-    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once, cora dataset this time"
+    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once, actual_settlemnts dataset this time"
     feature_count = 15
     train_test_split_number = 0.2
     np.random.seed(random_state_number)
