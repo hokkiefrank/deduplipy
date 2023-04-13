@@ -3,11 +3,13 @@ import os
 import json
 from datetime import datetime
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 def filters(testrun, score_threshold):
     try:
         fullstring = testrun['changes_description']
-        substring = "cora"
+        substring = "cora dataset" #  NEW RUNS: "cora_actual_dataset"  OLD RUNS: "cora dataset", "actual_settlemnts"
         if substring not in fullstring:
             #print(fullstring)
             return False
@@ -122,15 +124,22 @@ def plots(all_data, x_axis_numbers, plot_names, test_split=False):
 
 
 if __name__ == '__main__':
-    scores = [0.3,0.35,0.4,0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
+    scores = np.arange(0.0, 1.0, 0.05)
+    scores = range(0, 100, 5)
+    #scores = [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
+    final_scores = []
     result = {}
     for score in scores:
+        score = score/100
         files = load_files(score)
+        if len(files) == 0:
+            continue
         result = get_average(files, result)
+        final_scores.append(score)
 
     different_plots = ['precision', 'recall', 'f1', 'bmd', 'variation_of_information']
 
     #plots(result, scores, different_plots)
-    plots(result, scores, different_plots, test_split=True)
+    plots(result, final_scores, different_plots, test_split=True)
     print("almost done")
 

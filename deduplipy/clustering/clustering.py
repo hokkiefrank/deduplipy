@@ -566,7 +566,7 @@ def get_cluster_stats(subgraph) -> dict:
             'edgecount': edgecount, 'maxedgeweight': maxedgeweight,
             'minedgeweight': minedgeweight, 'avgedgeweight': avgedgeweight,
             'density': density, 'maxdegree': maxdegree, 'mindegree': mindegree,
-            'avgdegree': avgdegree, 'triangles': triangles,  # 'connectivity': connectivity,
-            'centrality': avgcentral}
+            'avgdegree': avgdegree, 'triangles': triangles,
+            'centrality': avgcentral}# 'connectivity': connectivity,
 
     return stat

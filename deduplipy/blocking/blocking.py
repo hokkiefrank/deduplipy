@@ -80,7 +80,7 @@ class Blocking(BaseEstimator):
                 self.rules_selected.append(rule_spec)
         return self
 
-    def _fingerprint(self, X: pd.DataFrame) -> pd.DataFrame:
+    def _fingerprint(self, X: pd.DataFrame, groupbyname) -> pd.DataFrame:
         """
         Applies blocking rules to data and adds a column 'fingerprint' containing the blocking rules results
 
@@ -99,7 +99,9 @@ class Blocking(BaseEstimator):
             df[f'{col_name}_{func_name}'] = pd.Series([function(x) for x in df[col_name]])
             df.loc[df[f'{col_name}_{func_name}'].notnull(), f'{col_name}_{func_name}'] = \
                 df[df[f'{col_name}_{func_name}'].notnull()][f'{col_name}_{func_name}'] + f":{j}"
-        df_melted = df.melt(id_vars=self.col_names + [ROW_ID], value_name='fingerprint').drop(columns=['variable'])
+        df_melted_temp = df.melt(id_vars=self.col_names + [ROW_ID], value_name='fingerprint')
+        df_melted_temp = df_melted_temp[df_melted_temp['variable'] != groupbyname]
+        df_melted = df_melted_temp.drop(columns=['variable'])
         df_melted.dropna(inplace=True)
         return df_melted
 
@@ -182,7 +184,7 @@ class Blocking(BaseEstimator):
         #self.pairs_col_names = [f'{x}_1' for x in self.col_names] + [f'{x}_2' for x in self.col_names]
         return pairs_table
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    def transform(self, X: pd.DataFrame, groupbyname: str) -> pd.DataFrame:
         """
         Applies blocking rules on new data
 
@@ -193,7 +195,7 @@ class Blocking(BaseEstimator):
             Pandas dataframe containing blocking rules applied on new data
 
         """
-        X_fingerprinted = self._fingerprint(X)
+        X_fingerprinted = self._fingerprint(X, groupbyname)
         pairs_table = self._create_pairs_table(X_fingerprinted)
         pairs_table = pairs_table.drop_duplicates(subset=[f'{ROW_ID}_1', f'{ROW_ID}_2'])
         if self.save_intermediate_steps:

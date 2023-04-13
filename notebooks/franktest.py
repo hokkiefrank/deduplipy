@@ -29,11 +29,11 @@ from numpy import std
 
 import pickle
 
-dataset = 'settlements'
-learning = False
+dataset = 'musicbrainz20k'
+learning = True
 pairs = None
 pairs_name = None
-save_intermediate = False
+save_intermediate = True
 pickle_name = None
 groupby_name = None
 field_info = None
@@ -47,7 +47,7 @@ if dataset == 'musicbrainz20k':
     field_info = {'title': [three_gram]}
     myDedupliPy = Deduplicator(['title', 'artist', 'album'], rules={'album': [first_letter]}, field_info=field_info)
     myDedupliPy.verbose = True
-    pickle_name = 'musicbrainz20kfulltest2.pkl'
+    pickle_name = 'musicbrainz20k_actual_blocking.pkl'
     if learning:
         myDedupliPy.fit(df)
         with open(pickle_name, 'wb') as f:
@@ -57,8 +57,8 @@ if dataset == 'musicbrainz20k':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    pairs_name = "scored_pairs_table_musicbrainz20k_full.csv"
-    pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
+    #pairs_name = "scored_pairs_table_musicbrainz20k_full.csv"
+    #pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'musicbrainz200k':
     df = load_data(kind='musicbrainz200k')
@@ -145,7 +145,7 @@ elif dataset == 'cora':
     myDedupliPy = Deduplicator(['authors', 'title'],
                                rules={'authors': [first_two_letters], 'title': [first_two_letters]})
     myDedupliPy.verbose = True
-    pickle_name = 'cora_customblocking_two_letters.pkl'
+    pickle_name = 'cora_actual_customblocking_two_letters.pkl'
     if learning:
         myDedupliPy.save_intermediate_steps = save_intermediate
         myDedupliPy.fit(df)
@@ -155,7 +155,7 @@ elif dataset == 'cora':
         with open(pickle_name, 'rb') as f:
             myDedupliPy = pickle.load(f)
             myDedupliPy.save_intermediate_steps = save_intermediate
-    pairs_name = "score_pairs_table_cora_custom_blocking.csv"
+    pairs_name = "scored_pairs_table_actual_cora_custom_blocking.csv"
     pairs = pd.read_csv(os.path.join('./', pairs_name), sep="|")
 
 elif dataset == 'settlements':
@@ -186,18 +186,18 @@ amount = len(df)
 markov_col = get_cluster_column_name(markov_clustering.__name__)
 hierar_col = get_cluster_column_name(hierarchical_clustering.__name__)
 connected_col = get_cluster_column_name(connected_components.__name__)
-score_threshes = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
-random_states = range(7)
+score_threshes = [0.3]
+random_states = range(1)
 config_options = list(itertools.product(score_threshes, random_states))
 for config_option in config_options:
     score_thresh = config_option[0]
     random_state_number = config_option[1]
-    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once, actual_settlemnts dataset this time"
+    mes = f"Running with scorethreshold, random_state of: {score_thresh}, {random_state_number} weighted, unweighted and multiple probabilities at once, cora_actual_dataset"
     feature_count = 15
     train_test_split_number = 0.2
     np.random.seed(random_state_number)
     cluster_algos = [connected_components, hierarchical_clustering, markov_clustering, optics, cdlib_ipca, cdlib_dcs,
-                     cdlib_pycombo, walktrap, cdlib_scan]
+                     cdlib_pycombo, louvain, walktrap, greedy_modularity, cdlib_der, cdlib_scan, affinity_propagation]
     cluster_algo_names = [name.__name__ for name in cluster_algos]
     args = {hierarchical_clustering.__name__: {'cluster_threshold': 0.7, 'fill_missing': True},
             markov_clustering.__name__: {'inflation': 2},
@@ -216,7 +216,7 @@ for config_option in config_options:
               'split_version': 'features_split'}
 
     res, stat = myDedupliPy.predict(df, clustering=cluster_algos, old_scored_pairs=pairs, score_threshold=score_thresh,
-                                    args=args)
+                                    groupbyname=groupby_name, args=args)
 
     rs = {}
     label_dict = {}

@@ -166,7 +166,7 @@ class Deduplicator:
         return X
 
     def predict(self, X: pd.DataFrame, score_threshold: float = 0.1, clustering=None, old_scored_pairs=None, suffix="",
-                **args) -> pd.DataFrame:
+                groupbyname=None, **args) -> pd.DataFrame:
         """
         Predict on new data using the trained deduplicator.
 
@@ -190,7 +190,7 @@ class Deduplicator:
         if self.verbose:
             print('blocking started')
             b_start = perf_counter()
-        pairs_table = self.myBlocker.transform(df)
+        pairs_table = self.myBlocker.transform(df, groupbyname)
         if self.verbose:
             b_stop = perf_counter()
             print('blocking finished')
